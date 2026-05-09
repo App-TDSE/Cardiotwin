@@ -6,7 +6,7 @@ services:
     ports:
       - "1883:1883"
     volumes:
-      - ./mosquitto/config:/mosquitto/config:ro
+      - ./mosquitto/config:/mosquitto/config
       - mosquitto-data:/mosquitto/data
       - mosquitto-log:/mosquitto/log
     networks:
@@ -33,9 +33,11 @@ services:
       - MQTT_TOPIC_PRED=cardiotwin/telemetry/predictions
       - DB_PATH=/data/cardiotwin.db
       - MODEL_PATH=/app/model.pkl
+      - DATASET_PATH=/seed/framingham.csv
       - PYTHONUNBUFFERED=1
     volumes:
       - shared-data:/data
+      - ./data:/seed:ro
     networks:
       - cardiotwin-net
     restart: unless-stopped

@@ -92,7 +92,10 @@ def on_message(client, userdata, msg):
 if __name__ == "__main__":
     init_db()
     
-    client = mqtt.Client("cardiotwin-watchdog")
+    client = mqtt.Client(
+        mqtt.CallbackAPIVersion.VERSION1,
+        client_id="cardiotwin-watchdog",
+    )
     client.on_connect = on_connect
     client.on_message = on_message
 
