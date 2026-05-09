@@ -1,4 +1,5 @@
-streamlit
-paho-mqtt
-pandas
-plotly
+streamlit==1.39.0
+streamlit-autorefresh==1.0.1
+pandas==2.2.3
+plotly==5.24.1
+numpy==2.1.3

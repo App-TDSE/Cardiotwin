@@ -1,48 +1,94 @@
-version: '3.8'
-
 services:
+
   mosquitto:
-    image: eclipse-mosquitto:latest
-    container_name: mosquitto
+    image: eclipse-mosquitto:2.0
+    container_name: cardiotwin-mosquitto
     ports:
       - "1883:1883"
-      - "9001:9001"
     volumes:
-      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - mosquitto_data:/mosquitto/data
-      - mosquitto_log:/mosquitto/log
-
-  emulator:
-    build: ./services/emulator
-    container_name: cardiotwin-emulator
-    depends_on:
-      - mosquitto
-    environment:
-      - MQTT_BROKER=mosquitto
-    volumes:
-      - ./data:/data
+      - ./mosquitto/config:/mosquitto/config:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    networks:
+      - cardiotwin-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -t '$$SYS/#' -C 1 -W 3 || exit 0"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   engine:
-    build: ./services/engine
+    build:
+      context: ./services/engine
+      dockerfile: Dockerfile
     container_name: cardiotwin-engine
     depends_on:
-      - mosquitto
+      mosquitto:
+        condition: service_healthy
     environment:
       - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - MQTT_TOPIC_RAW=cardiotwin/telemetry/raw
+      - MQTT_TOPIC_PRED=cardiotwin/telemetry/predictions
+      - DB_PATH=/data/cardiotwin.db
+      - MODEL_PATH=/app/model.pkl
+      - PYTHONUNBUFFERED=1
     volumes:
-      - ./data:/data
+      - shared-data:/data
+    networks:
+      - cardiotwin-net
+    restart: unless-stopped
+
+  emulator:
+    build:
+      context: ./services/emulator
+      dockerfile: Dockerfile
+    container_name: cardiotwin-emulator
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      engine:
+        condition: service_started
+    environment:
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - MQTT_TOPIC_RAW=cardiotwin/telemetry/raw
+      - DATASET_PATH=/data/framingham.csv
+      - PUBLISH_INTERVAL=1.0
+      - NOISE_SIGMA=2.0
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/data:ro
+    networks:
+      - cardiotwin-net
+    restart: unless-stopped
 
   dashboard:
-    build: ./services/dashboard
+    build:
+      context: ./services/dashboard
+      dockerfile: Dockerfile
     container_name: cardiotwin-dashboard
+    depends_on:
+      engine:
+        condition: service_started
     ports:
       - "8501:8501"
-    depends_on:
-      - mosquitto
-      - engine
     environment:
-      - MQTT_BROKER=mosquitto
+      - DB_PATH=/data/cardiotwin.db
+      - REFRESH_MS=1000
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - shared-data:/data:ro
+    networks:
+      - cardiotwin-net
+    restart: unless-stopped
+
+networks:
+  cardiotwin-net:
+    driver: bridge
 
 volumes:
-  mosquitto_data:
-  mosquitto_log:
+  mosquitto-data:
+  mosquitto-log:
+  shared-data:
