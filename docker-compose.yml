@@ -84,6 +84,24 @@ services:
       - cardiotwin-net
     restart: unless-stopped
 
+  watchdog:
+    build:
+      context: ./services/watchdog
+      dockerfile: Dockerfile
+    container_name: cardiotwin-watchdog
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    environment:
+      - MQTT_BROKER=mosquitto
+      - DB_PATH=/data/cardiotwin.db
+    volumes:
+      - shared-data:/data
+    networks:
+      - cardiotwin-net
+    restart: unless-stopped
+
+
 networks:
   cardiotwin-net:
     driver: bridge
