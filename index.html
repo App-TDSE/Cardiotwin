@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CardioTwin · Healthcare Digital Twin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* =========================================================
+     CardioTwin · Healthcare Digital Twin
+     Single-file dashboard — no frameworks
+     ========================================================= */
+
+  :root {
+    --bg: #0a0f1e;
+    --bg-2: #0d1322;
+    --surface: #111827;
+    --surface-2: #131b2e;
+    --border: #1f2937;
+    --border-strong: #2a3548;
+    --text: #e6ebf2;
+    --text-dim: #8b95a8;
+    --text-mute: #5b6577;
+    --accent: #e53e3e;       /* cardiac red */
+    --accent-soft: #ff6b6b;
+    --cyan: #06b6d4;         /* medical cyan */
+    --cyan-soft: #22d3ee;
+    --green: #10b981;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --shadow-card: 0 1px 0 rgba(255,255,255,0.02) inset, 0 8px 24px -12px rgba(0,0,0,0.7);
+    --radius: 8px;
+    --radius-sm: 6px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv11', 'ss01';
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(900px 500px at 50% -10%, rgba(229,62,62,0.12), transparent 60%),
+      radial-gradient(700px 500px at 90% 110%, rgba(229,62,62,0.06), transparent 60%),
+      radial-gradient(600px 400px at -10% 50%, rgba(6,182,212,0.04), transparent 60%);
+  }
+
+  .num { font-variant-numeric: tabular-nums; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  /* ============================== APP SHELL ============================== */
+  .app {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 20px 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-height: 100vh;
+  }
+
+  /* ============================== HEADER ============================== */
+  .header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 28px;
+    padding: 16px 22px;
+    background: linear-gradient(180deg, rgba(17,24,39,0.6), rgba(17,24,39,0.3));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(500px 100px at 25% 0%, rgba(229,62,62,0.18), transparent 70%),
+      radial-gradient(400px 80px at 75% 100%, rgba(229,62,62,0.10), transparent 70%);
+    pointer-events: none;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    z-index: 1;
+  }
+  .heart-mark {
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, rgba(229,62,62,0.15), rgba(229,62,62,0.05));
+    border: 1px solid rgba(229,62,62,0.35);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 18px -4px rgba(229,62,62,0.4);
+  }
+  .heart-mark svg {
+    width: 22px; height: 22px;
+    color: var(--accent);
+    animation: heartbeat 800ms ease-in-out infinite;
+    transform-origin: center;
+    filter: drop-shadow(0 0 6px rgba(229,62,62,0.6));
+  }
+  @keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    20%      { transform: scale(1.08); }
+    40%      { transform: scale(0.98); }
+    60%      { transform: scale(1.04); }
+  }
+
+  .brand-text { display: flex; flex-direction: column; gap: 2px; }
+  .brand-name {
+    font-size: 18px; font-weight: 700; letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  .brand-name .twin { color: var(--accent); }
+  .brand-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .brand-sub .dot { color: var(--border-strong); margin: 0 6px; }
+
+  /* ECG strip in the header */
+  .ecg-wrap {
+    height: 60px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background:
+      linear-gradient(180deg, rgba(229,62,62,0.05), transparent 60%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 24px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 12px),
+      var(--bg-2);
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+  }
+  .ecg-wrap::after {
+    /* subtle leading fade so wraparound is invisible */
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, var(--bg-2) 0%, transparent 4%, transparent 96%, var(--bg-2) 100%);
+    pointer-events: none;
+  }
+  .ecg-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .ecg-track {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 6px rgba(229,62,62,0.65));
+  }
+  .ecg-glow {
+    fill: none;
+    stroke: rgba(229,62,62,0.30);
+    stroke-width: 4;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  /* Connection status */
+  .status {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px 8px 12px;
+    background: rgba(16,185,129,0.06);
+    border: 1px solid rgba(16,185,129,0.25);
+    border-radius: 999px;
+    font-size: 12px; font-weight: 500;
+    color: #b6f0d6;
+    z-index: 1;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    position: relative;
+    box-shadow: 0 0 0 0 rgba(16,185,129,0.6);
+  }
+  .status-dot::after {
+    content: '';
+    position: absolute; inset: -4px;
+    border-radius: 50%;
+    border: 1px solid rgba(16,185,129,0.6);
+    animation: ripple 1.6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+  }
+  @keyframes ripple {
+    0%   { transform: scale(0.6); opacity: 0.9; }
+    100% { transform: scale(2.2); opacity: 0;   }
+  }
+
+  /* ============================== MAIN GRID ============================== */
+  .main {
+    display: grid;
+    grid-template-columns: 320px 1fr 380px;
+    gap: 18px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .col {
+    display: flex; flex-direction: column; gap: 14px;
+    min-width: 0;
+  }
+
+  .col-title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    padding: 0 4px;
+    margin-top: 2px;
+  }
+  .col-title::before {
+    content: '';
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* ============================== VITAL CARD (compact horizontal) ============================== */
+  .vital {
+    background: linear-gradient(180deg, rgba(19,27,46,0.7), rgba(17,24,39,0.55));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 200ms ease;
+    display: grid;
+    grid-template-columns: minmax(108px, auto) 1fr;
+    column-gap: 14px;
+    align-items: center;
+  }
+  .vital:hover { border-color: var(--border-strong); }
+  .vital::before {
+    /* subtle left accent stripe */
+    content: '';
+    position: absolute;
+    left: 0; top: 10%; bottom: 10%;
+    width: 2px;
+    background: var(--accent-stripe, var(--cyan));
+    opacity: 0.55;
+    border-radius: 0 2px 2px 0;
+  }
+  .vital[data-key="bp"]  { --accent-stripe: var(--accent); }
+  .vital[data-key="hr"]  { --accent-stripe: #f87171; }
+  .vital[data-key="glu"] { --accent-stripe: var(--cyan); }
+
+  .vital-info {
+    display: flex; flex-direction: column; gap: 2px;
+    min-width: 0;
+  }
+  .vital-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-mute);
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .vital-label .ico {
+    display: inline-grid; place-items: center;
+    width: 12px; height: 12px;
+    color: var(--text-mute);
+    opacity: 0.75;
+  }
+  .vital-label .ico svg { width: 12px; height: 12px; }
+
+  .vital-value {
+    display: flex; align-items: baseline; gap: 5px;
+    line-height: 1;
+    margin-top: 2px;
+  }
+  .vital-value .v {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .vital-value .sep {
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--border-strong);
+    margin: 0 1px;
+  }
+  .vital-value .v2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: -0.01em;
+  }
+  .vital-value .u {
+    font-size: 10px;
+    color: var(--text-mute);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-left: 2px;
+  }
+  .vital-meta {
+    margin-top: 4px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; color: var(--text-mute);
+    flex-wrap: wrap;
+  }
+  .vital-meta .delta {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 600;
+    font-size: 9.5px;
+    line-height: 1.4;
+  }
+  .vital-meta .range {
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+  }
+  .delta.up   { color: #fda4af; background: rgba(229,62,62,0.10); }
+  .delta.down { color: #67e8f9; background: rgba(6,182,212,0.10); }
+  .delta.flat { color: var(--text-mute); background: rgba(255,255,255,0.03); }
+
+  .vital-spark {
+    position: relative;
+    height: 56px;
+    min-width: 0;
+  }
+  .spark {
+    position: absolute; inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
+  }
+  /* stack two sparks for the BP card */
+  .vital[data-key="bp"] .vital-spark { height: 60px; }
+  .vital[data-key="bp"] .spark.spark-top    { top: 0;  height: 50%; }
+  .vital[data-key="bp"] .spark.spark-bottom { top: 50%; height: 50%; }
+
+  .spark-line {
+    fill: none;
+    stroke: var(--cyan);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  .spark-fill { stroke: none; }
+  /* per-vital accent */
+  .vital[data-key="bp"]  .spark.spark-top    .spark-line { stroke: #f87171; }
+  .vital[data-key="bp"]  .spark.spark-top    .spark-fill { fill: url(#grad-red); }
+  .vital[data-key="bp"]  .spark.spark-bottom .spark-line { stroke: #fb923c; }
+  .vital[data-key="bp"]  .spark.spark-bottom .spark-fill { fill: url(#grad-orange); }
+  .vital[data-key="hr"]  .spark-line { stroke: var(--accent); }
+  .vital[data-key="hr"]  .spark-fill { fill: url(#grad-accent); }
+  .vital[data-key="glu"] .spark-line { stroke: var(--cyan); }
+  .vital[data-key="glu"] .spark-fill { fill: url(#grad-cyan); }
+
+  /* ============================== GAUGE ============================== */
+  .gauge-card {
+    background: linear-gradient(180deg, rgba(19,27,46,0.72), rgba(17,24,39,0.55));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: var(--shadow-card);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  .gauge-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(600px 360px at 50% 30%, rgba(229,62,62,0.10), transparent 70%);
+    pointer-events: none;
+  }
+  .gauge-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .gauge-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text);
+  }
+  .gauge-title .small {
+    color: var(--text-mute);
+    font-weight: 400;
+    margin-left: 6px;
+  }
+  .gauge-tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .gauge-tag b { color: var(--accent); font-weight: 600; }
+
+  .gauge-stage {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    position: relative;
+    padding: 8px 0;
+  }
+  .gauge {
+    position: relative;
+    width: min(360px, 80%);
+    aspect-ratio: 1 / 1;
+  }
+  .gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+
+  .gauge-track  { fill: none; stroke: rgba(255,255,255,0.04); stroke-width: 14; }
+  .gauge-zones  { fill: none; stroke-width: 4; opacity: 0.55; }
+  .gauge-arc {
+    fill: none;
+    stroke-width: 14;
+    stroke-linecap: round;
+    transition: stroke-dasharray 600ms ease, stroke 600ms ease, filter 600ms ease;
+  }
+
+  .gauge-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px;
+    pointer-events: none;
+    text-align: center;
+  }
+  .gauge-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    font-weight: 600;
+  }
+  .gauge-value {
+    font-size: 64px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    color: var(--text);
+  }
+  .gauge-value .pct {
+    font-size: 22px;
+    color: var(--text-dim);
+    font-weight: 500;
+    margin-left: 2px;
+    letter-spacing: 0;
+  }
+  .gauge-label {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    transition: color 400ms ease, background 400ms ease, border-color 400ms ease;
+  }
+
+  .level-low    { color: #6ee7b7; background: rgba(16,185,129,0.10); border-color: rgba(16,185,129,0.30); }
+  .level-mid    { color: #fcd34d; background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.30); }
+  .level-high   { color: #fca5a5; background: rgba(229,62,62,0.12); border-color: rgba(229,62,62,0.35); }
+
+  .gauge-legend {
+    display: flex; justify-content: space-around; gap: 12px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    margin-top: 8px;
+  }
+  .legend-item { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+  .legend-bar { width: 36px; height: 3px; border-radius: 2px; }
+  .legend-low  { background: var(--green); }
+  .legend-mid  { background: var(--amber); }
+  .legend-hi   { background: var(--red); }
+  .legend-text { font-size: 10px; color: var(--text-mute); letter-spacing: 0.04em; text-transform: uppercase; font-weight: 500; }
+  .legend-range { font-size: 11px; color: var(--text-dim); font-weight: 500; }
+
+  /* ============================== SHAP ============================== */
+  .shap-card {
+    background: linear-gradient(180deg, rgba(19,27,46,0.7), rgba(17,24,39,0.55));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 18px 16px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: var(--shadow-card);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .shap-head { margin-bottom: 4px; }
+  .shap-title {
+    font-size: 13px; font-weight: 600;
+    color: var(--text);
+  }
+  .shap-sub {
+    font-size: 11px;
+    color: var(--text-mute);
+    margin-top: 2px;
+  }
+  .shap-list {
+    margin-top: 14px;
+    display: flex; flex-direction: column; gap: 12px;
+    flex: 1;
+  }
+  .shap-row {
+    display: grid;
+    grid-template-columns: 110px 1fr 56px;
+    align-items: center;
+    gap: 10px;
+  }
+  .shap-name {
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .shap-name .feat-val {
+    color: var(--text-mute);
+    margin-left: 4px;
+    font-weight: 400;
+    font-size: 11px;
+  }
+  .shap-track {
+    height: 18px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .shap-track::before {
+    /* center axis */
+    content: '';
+    position: absolute;
+    left: 50%; top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border-strong);
+  }
+  .shap-bar {
+    position: absolute;
+    top: 2px; bottom: 2px;
+    border-radius: 3px;
+    transition: width 600ms cubic-bezier(.22,.61,.36,1), left 600ms cubic-bezier(.22,.61,.36,1), right 600ms cubic-bezier(.22,.61,.36,1);
+  }
+  .shap-bar.pos {
+    left: 50%;
+    background: linear-gradient(90deg, rgba(229,62,62,0.55), #ff7a7a);
+    box-shadow: 0 0 12px -4px rgba(229,62,62,0.7);
+  }
+  .shap-bar.neg {
+    right: 50%;
+    background: linear-gradient(270deg, rgba(6,182,212,0.55), #7dd3fc);
+    box-shadow: 0 0 12px -4px rgba(6,182,212,0.7);
+  }
+  .shap-impact {
+    text-align: right;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .shap-impact.pos { color: #ff8a8a; }
+  .shap-impact.neg { color: #7dd3fc; }
+
+  .shap-foot {
+    margin-top: 14px;
+    display: flex; gap: 18px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-mute);
+  }
+  .shap-foot .swatch {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: -1px;
+  }
+  .swatch.coral { background: linear-gradient(90deg, rgba(229,62,62,0.55), #ff7a7a); }
+  .swatch.blue  { background: linear-gradient(90deg, rgba(6,182,212,0.55), #7dd3fc); }
+
+  /* ============================== FOOTER ============================== */
+  .footer {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 24px;
+    align-items: center;
+    padding: 12px 22px;
+    background: rgba(17,24,39,0.5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .foot-block {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .foot-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-mute);
+    font-weight: 600;
+  }
+  .foot-value {
+    color: var(--text);
+    font-weight: 500;
+  }
+  .foot-divider {
+    width: 1px; height: 14px; background: var(--border);
+  }
+  .foot-meta {
+    display: flex; align-items: center; gap: 14px;
+    justify-content: center;
+    color: var(--text-mute);
+    font-size: 11px;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .badge .b-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .foot-right {
+    color: var(--text-mute);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  /* counter flash */
+  @keyframes flash {
+    0%   { color: var(--cyan-soft); text-shadow: 0 0 16px rgba(6,182,212,0.7); }
+    100% { color: var(--text); text-shadow: none; }
+  }
+  .flash { animation: flash 600ms ease-out; }
+  @keyframes flashRed {
+    0%   { color: var(--accent-soft); text-shadow: 0 0 16px rgba(229,62,62,0.7); }
+    100% { color: var(--text); text-shadow: none; }
+  }
+  .flash-red { animation: flashRed 700ms ease-out; }
+
+  @media (max-width: 1200px) {
+    .main { grid-template-columns: 1fr; }
+  }
+
+  /* ============================== START SCREEN ============================== */
+  .splash {
+    position: fixed; inset: 0;
+    z-index: 1000;
+    background:
+      radial-gradient(900px 500px at 50% 45%, rgba(229,62,62,0.10), transparent 60%),
+      radial-gradient(700px 500px at 50% 90%, rgba(6,182,212,0.06), transparent 60%),
+      var(--bg);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    transition: opacity 700ms ease, visibility 700ms ease;
+  }
+  .splash[data-hidden="true"] {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* Background heart pulse */
+  .splash-heart {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 70vmin; height: 70vmin;
+    transform: translate(-50%, -50%);
+    color: var(--accent);
+    opacity: 0.16;
+    animation: splash-beat 1100ms ease-in-out infinite;
+    transform-origin: center;
+    filter: drop-shadow(0 0 80px rgba(229,62,62,0.45));
+    pointer-events: none;
+  }
+  .splash-heart svg { width: 100%; height: 100%; display: block; }
+  @keyframes splash-beat {
+    0%, 100% { transform: translate(-50%, -50%) scale(1);    opacity: 0.14; }
+    18%      { transform: translate(-50%, -50%) scale(1.10); opacity: 0.22; }
+    36%      { transform: translate(-50%, -50%) scale(0.97); opacity: 0.14; }
+    54%      { transform: translate(-50%, -50%) scale(1.05); opacity: 0.18; }
+  }
+
+  /* Concentric pulse rings */
+  .splash-ring {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 50vmin; height: 50vmin;
+    border-radius: 50%;
+    border: 1px solid rgba(229,62,62,0.35);
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0;
+    animation: splash-ripple 2.4s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+    pointer-events: none;
+  }
+  .splash-ring.r2 { animation-delay: 0.8s; }
+  .splash-ring.r3 { animation-delay: 1.6s; }
+  @keyframes splash-ripple {
+    0%   { transform: translate(-50%, -50%) scale(0.45); opacity: 0;   }
+    25%  { opacity: 0.55; }
+    100% { transform: translate(-50%, -50%) scale(2.2);  opacity: 0;   }
+  }
+
+  /* ECG line across the splash */
+  .splash-ecg {
+    position: absolute;
+    left: 0; right: 0;
+    top: 65%;
+    height: 80px;
+    overflow: hidden;
+    opacity: 0.55;
+    pointer-events: none;
+    mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent);
+  }
+  .splash-ecg svg { width: 200%; height: 100%; display: block; }
+
+  .splash-content {
+    position: relative;
+    z-index: 2;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 28px;
+    text-align: center;
+    padding: 0 24px;
+  }
+  .splash-eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    background: rgba(17,24,39,0.55);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .splash-eyebrow .e-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: heartbeat 800ms ease-in-out infinite;
+  }
+  .splash-title {
+    font-size: clamp(64px, 11vw, 140px);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 0.95;
+    margin: 0;
+    color: var(--text);
+  }
+  .splash-title .twin {
+    color: var(--accent);
+    background: linear-gradient(180deg, #ff7a7a, var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .splash-tagline {
+    font-size: clamp(14px, 1.4vw, 17px);
+    color: var(--text-dim);
+    max-width: 540px;
+    line-height: 1.5;
+    margin: 0;
+    font-weight: 400;
+  }
+  .splash-tagline b { color: var(--text); font-weight: 600; }
+
+  .splash-cta {
+    margin-top: 12px;
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 14px 26px 14px 22px;
+    background: linear-gradient(180deg, #f25555, var(--accent));
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: var(--radius);
+    cursor: pointer;
+    box-shadow:
+      0 0 0 4px rgba(229,62,62,0.10),
+      0 12px 30px -10px rgba(229,62,62,0.6),
+      0 1px 0 rgba(255,255,255,0.18) inset;
+    transition: transform 160ms ease, box-shadow 200ms ease, filter 200ms ease;
+  }
+  .splash-cta:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+    box-shadow:
+      0 0 0 5px rgba(229,62,62,0.14),
+      0 16px 36px -10px rgba(229,62,62,0.7),
+      0 1px 0 rgba(255,255,255,0.18) inset;
+  }
+  .splash-cta:active { transform: translateY(0); }
+  .splash-cta .arrow {
+    display: inline-grid; place-items: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+    transition: transform 200ms ease;
+  }
+  .splash-cta:hover .arrow { transform: translateX(3px); }
+  .splash-cta .arrow svg { width: 12px; height: 12px; }
+
+  .splash-foot {
+    position: absolute;
+    bottom: 28px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 18px;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    font-weight: 600;
+    z-index: 2;
+  }
+  .splash-foot .sep { width: 24px; height: 1px; background: var(--border-strong); }
+
+  .splash-credentials {
+    position: absolute;
+    top: 28px; left: 28px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px;
+    color: var(--text-dim);
+    z-index: 2;
+  }
+  .splash-credentials .lk {
+    width: 18px; height: 18px;
+    display: grid; place-items: center;
+    border-radius: 4px;
+    background: rgba(229,62,62,0.10);
+    border: 1px solid rgba(229,62,62,0.30);
+    color: var(--accent);
+  }
+  .splash-credentials .lk svg { width: 11px; height: 11px; }
+</style>
+</head>
+<body>
+  <!-- ============================== START SCREEN ============================== -->
+  <div class="splash" id="splash" role="dialog" aria-label="CardioTwin · Bienvenida">
+    <div class="splash-credentials">
+      <span class="lk">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-9.5-9.4C1.2 8.5 3.4 5 7 5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.6 0 5.8 3.5 4.5 6.6C19.5 16.4 12 21 12 21z"/></svg>
+      </span>
+      <span>CardioTwin <span style="color:var(--text-mute); margin: 0 6px;">·</span> v0.9.4</span>
+    </div>
+
+    <div class="splash-ring r1" aria-hidden="true"></div>
+    <div class="splash-ring r2" aria-hidden="true"></div>
+    <div class="splash-ring r3" aria-hidden="true"></div>
+
+    <div class="splash-heart" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 21s-7.5-4.6-9.5-9.4C1.2 8.5 3.4 5 7 5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.6 0 5.8 3.5 4.5 6.6C19.5 16.4 12 21 12 21z"/>
+      </svg>
+    </div>
+
+    <div class="splash-ecg" aria-hidden="true">
+      <svg viewBox="0 0 2400 80" preserveAspectRatio="none">
+        <path id="splash-ecg-path"
+              d=""
+              fill="none"
+              stroke="#06b6d4"
+              stroke-width="1.6"
+              stroke-linejoin="round"
+              stroke-linecap="round"
+              style="filter: drop-shadow(0 0 6px rgba(6,182,212,0.6));"/>
+      </svg>
+    </div>
+
+    <div class="splash-content">
+      <span class="splash-eyebrow">
+        <span class="e-dot"></span>
+        Healthcare Digital Twin
+      </span>
+      <h1 class="splash-title">Cardio<span class="twin">Twin</span></h1>
+      <p class="splash-tagline">
+        Monitoreo cardiovascular en tiempo real con <b>gemelo digital</b>.
+        Predicción de riesgo coronario interpretable mediante <b>XGBoost + SHAP</b>.
+      </p>
+      <button class="splash-cta" id="splash-start" type="button">
+        Iniciar monitoreo
+        <span class="arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </button>
+    </div>
+
+    <div class="splash-foot">
+      <span>ECI</span>
+      <span class="sep"></span>
+      <span>TDSE 2026</span>
+      <span class="sep"></span>
+      <span>Stream 1 Hz</span>
+    </div>
+  </div>
+
+  <!-- Shared SVG defs for sparkline gradients -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="grad-red" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#f87171" stop-opacity="0.35"/>
+        <stop offset="100%" stop-color="#f87171" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="grad-orange" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#fb923c" stop-opacity="0.30"/>
+        <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="grad-accent" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#e53e3e" stop-opacity="0.35"/>
+        <stop offset="100%" stop-color="#e53e3e" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="grad-cyan" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.35"/>
+        <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+<div class="app">
+
+  <!-- ================================ HEADER ================================ -->
+  <header class="header">
+    <div class="brand">
+      <div class="heart-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 21s-7.5-4.6-9.5-9.4C1.2 8.5 3.4 5 7 5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.6 0 5.8 3.5 4.5 6.6C19.5 16.4 12 21 12 21z"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <div class="brand-name">Cardio<span class="twin">Twin</span></div>
+        <div class="brand-sub">Healthcare Digital Twin <span class="dot">·</span> Riesgo Coronario</div>
+      </div>
+    </div>
+
+    <div class="ecg-wrap" aria-hidden="true">
+      <svg class="ecg-svg" viewBox="0 0 1200 60" preserveAspectRatio="none">
+        <!-- Two copies of the path translated by 600 to create seamless scrolling -->
+        <g id="ecg-scroll">
+          <path class="ecg-glow" d=""></path>
+          <path class="ecg-track" d=""></path>
+          <path class="ecg-glow" d="" transform="translate(600,0)"></path>
+          <path class="ecg-track" d="" transform="translate(600,0)"></path>
+        </g>
+      </svg>
+    </div>
+
+    <div class="status" role="status">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span>Stream activo</span>
+      <span style="color:var(--text-mute); font-weight:400; margin-left:4px;">· 1 Hz</span>
+    </div>
+  </header>
+
+  <!-- ================================ MAIN ================================ -->
+  <main class="main">
+
+    <!-- ============== LEFT: VITALS ============== -->
+    <aside class="col" aria-label="Signos vitales">
+      <div class="col-title">Signos vitales · tiempo real</div>
+
+      <article class="vital" data-key="bp">
+        <div class="vital-info">
+          <div class="vital-label">
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M5 12h14"/></svg></span>
+            Presión arterial
+          </div>
+          <div class="vital-value">
+            <span class="v num" data-bind="sys">128</span>
+            <span class="sep">/</span>
+            <span class="v2 num" data-bind="dia">82</span>
+            <span class="u">mmHg</span>
+          </div>
+          <div class="vital-meta">
+            <span class="delta" data-bind="sys-delta">—</span>
+            <span class="range">110–140 / 70–90</span>
+          </div>
+        </div>
+        <div class="vital-spark">
+          <svg class="spark spark-top" viewBox="0 0 200 38" preserveAspectRatio="none">
+            <path class="spark-fill" data-bind="sys-fill" d=""></path>
+            <path class="spark-line" data-bind="sys-line" d=""></path>
+          </svg>
+          <svg class="spark spark-bottom" viewBox="0 0 200 38" preserveAspectRatio="none">
+            <path class="spark-fill" data-bind="dia-fill" d=""></path>
+            <path class="spark-line" data-bind="dia-line" d=""></path>
+          </svg>
+        </div>
+      </article>
+
+      <article class="vital" data-key="hr">
+        <div class="vital-info">
+          <div class="vital-label">
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg></span>
+            Frecuencia cardíaca
+          </div>
+          <div class="vital-value">
+            <span class="v num" data-bind="hr">72</span>
+            <span class="u">bpm</span>
+          </div>
+          <div class="vital-meta">
+            <span class="delta" data-bind="hr-delta">—</span>
+            <span class="range">60–100</span>
+          </div>
+        </div>
+        <div class="vital-spark">
+          <svg class="spark" viewBox="0 0 200 38" preserveAspectRatio="none">
+            <path class="spark-fill" data-bind="hr-fill" d=""></path>
+            <path class="spark-line" data-bind="hr-line" d=""></path>
+          </svg>
+        </div>
+      </article>
+
+      <article class="vital" data-key="glu">
+        <div class="vital-info">
+          <div class="vital-label">
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l5 7a6 6 0 11-10 0z"/></svg></span>
+            Glucosa
+          </div>
+          <div class="vital-value">
+            <span class="v num" data-bind="glu">98</span>
+            <span class="u">mg/dL</span>
+          </div>
+          <div class="vital-meta">
+            <span class="delta" data-bind="glu-delta">—</span>
+            <span class="range">70–110</span>
+          </div>
+        </div>
+        <div class="vital-spark">
+          <svg class="spark" viewBox="0 0 200 38" preserveAspectRatio="none">
+            <path class="spark-fill" data-bind="glu-fill" d=""></path>
+            <path class="spark-line" data-bind="glu-line" d=""></path>
+          </svg>
+        </div>
+      </article>
+    </aside>
+
+    <!-- ============== CENTER: GAUGE ============== -->
+    <section class="col" aria-label="Riesgo coronario">
+      <div class="col-title">Predicción de riesgo · CHD</div>
+
+      <div class="gauge-card">
+        <div class="gauge-head">
+          <div class="gauge-title">
+            Riesgo de Enfermedad Coronaria
+            <span class="small">— próximos 10 años</span>
+          </div>
+          <div class="gauge-tag">Modelo <b>XGBoost</b> · SHAP</div>
+        </div>
+
+        <div class="gauge-stage">
+          <div class="gauge">
+            <svg viewBox="0 0 200 200">
+              <!-- background track -->
+              <circle class="gauge-track" cx="100" cy="100" r="84"/>
+              <!-- thin zone bands (decorative) -->
+              <circle class="gauge-zones" cx="100" cy="100" r="96"
+                      stroke="#10b981"
+                      stroke-dasharray="105.6 422.4"
+                      stroke-dashoffset="0"/>
+              <circle class="gauge-zones" cx="100" cy="100" r="96"
+                      stroke="#f59e0b"
+                      stroke-dasharray="158.4 369.6"
+                      stroke-dashoffset="-110"/>
+              <circle class="gauge-zones" cx="100" cy="100" r="96"
+                      stroke="#ef4444"
+                      stroke-dasharray="264 264"
+                      stroke-dashoffset="-273"/>
+              <!-- live arc -->
+              <circle id="gauge-arc" class="gauge-arc"
+                      cx="100" cy="100" r="84"
+                      stroke="#10b981"
+                      stroke-dasharray="0 528"/>
+            </svg>
+            <div class="gauge-center">
+              <div class="gauge-eyebrow">Riesgo CHD</div>
+              <div class="gauge-value">
+                <span class="num" id="risk-value">12</span><span class="pct">%</span>
+              </div>
+              <div class="gauge-label level-low" id="risk-label">Riesgo bajo</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gauge-legend">
+          <div class="legend-item">
+            <span class="legend-bar legend-low"></span>
+            <span class="legend-text">Bajo</span>
+            <span class="legend-range num">&lt; 20%</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-bar legend-mid"></span>
+            <span class="legend-text">Moderado</span>
+            <span class="legend-range num">20 – 50%</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-bar legend-hi"></span>
+            <span class="legend-text">Alto</span>
+            <span class="legend-range num">&gt; 50%</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== RIGHT: SHAP ============== -->
+    <aside class="col" aria-label="Explicación del modelo">
+      <div class="col-title">Explicabilidad SHAP</div>
+
+      <div class="shap-card">
+        <div class="shap-head">
+          <div class="shap-title">¿Por qué este riesgo?</div>
+          <div class="shap-sub">Top 5 variables que más influyeron en la predicción del paciente actual.</div>
+        </div>
+
+        <div class="shap-list" id="shap-list"></div>
+
+        <div class="shap-foot">
+          <span><span class="swatch coral"></span>Aumenta el riesgo</span>
+          <span><span class="swatch blue"></span>Disminuye el riesgo</span>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ================================ FOOTER ================================ -->
+  <footer class="footer">
+    <div class="foot-block">
+      <span class="foot-label">Paciente virtual</span>
+      <span class="foot-value mono" id="patient-id">DT-7F3A · α-94821</span>
+    </div>
+
+    <div class="foot-meta">
+      <span class="badge"><span class="b-dot"></span>Inferencia</span>
+      <span>Última predicción</span>
+      <span class="foot-value mono num" id="last-ts">—</span>
+      <span class="foot-divider"></span>
+      <span>Latencia</span>
+      <span class="foot-value mono num" id="latency">12 ms</span>
+    </div>
+
+    <div class="foot-right">ECI · TDSE 2026</div>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   CardioTwin · simulación de stream
+   ============================================================ */
+(() => {
+  'use strict';
+
+  // ------------- Utilities -------------
+  const rand = (min, max) => Math.random() * (max - min) + min;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  // ============================================================
+  // 1. ECG strip — animated stroke-dashoffset on a seamless path
+  // ============================================================
+  function buildECGPath() {
+    // Build a 600-unit-wide ECG that tiles perfectly.
+    // Within 600 units we draw 3 "beats" of 200 units each.
+    const beats = [];
+    const beatWidth = 200;
+    const baseY = 30;
+    let x = 0;
+    for (let b = 0; b < 3; b++) {
+      // baseline before P-wave
+      beats.push(`M ${x} ${baseY}`);
+      beats.push(`L ${x + 40} ${baseY}`);
+      // P wave (small bump)
+      beats.push(`Q ${x + 50} ${baseY - 6}, ${x + 60} ${baseY}`);
+      beats.push(`L ${x + 80} ${baseY}`);
+      // QRS complex
+      beats.push(`L ${x + 86} ${baseY + 6}`);     // Q dip
+      beats.push(`L ${x + 92} ${baseY - 22}`);    // R rise
+      beats.push(`L ${x + 100} ${baseY + 18}`);   // S deep
+      beats.push(`L ${x + 108} ${baseY}`);
+      // T wave
+      beats.push(`L ${x + 130} ${baseY}`);
+      beats.push(`Q ${x + 145} ${baseY - 9}, ${x + 160} ${baseY}`);
+      beats.push(`L ${beatWidth * (b + 1)} ${baseY}`);
+      x = beatWidth * (b + 1);
+    }
+    return beats.join(' ');
+  }
+
+  function setupECG() {
+    const d = buildECGPath();
+    $$('.ecg-track, .ecg-glow', $('.ecg-wrap')).forEach(p => p.setAttribute('d', d));
+    const group = $('#ecg-scroll');
+    let off = 0;
+    const speed = 2.6; // px per frame at 60fps
+    function tick() {
+      off = (off + speed) % 600;
+      group.setAttribute('transform', `translate(${-off},0)`);
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // ============================================================
+  // 2. Vital signs simulator
+  // ============================================================
+  const VITAL_BUFFER = 20;
+  const vitals = {
+    sys: { value: 128, target: 128, range: [105, 155], history: [], unit: 'mmHg' },
+    dia: { value: 82,  target: 82,  range: [65,  100], history: [], unit: 'mmHg' },
+    hr:  { value: 72,  target: 72,  range: [55,  108], history: [], unit: 'bpm'  },
+    glu: { value: 98,  target: 98,  range: [70,  165], history: [], unit: 'mg/dL'}
+  };
+  // seed history with smooth random walk
+  for (const k in vitals) {
+    const v = vitals[k];
+    let cur = v.value;
+    for (let i = 0; i < VITAL_BUFFER; i++) {
+      cur += rand(-1, 1) * (v.range[1] - v.range[0]) * 0.015;
+      cur = clamp(cur, v.range[0], v.range[1]);
+      v.history.push(cur);
+    }
+    v.value = cur;
+    v.target = cur;
+  }
+
+  function pickNewTarget(k) {
+    const v = vitals[k];
+    const span = v.range[1] - v.range[0];
+    // bias around current with occasional excursion
+    const bias = Math.random() < 0.18 ? rand(-span * 0.18, span * 0.18) : rand(-span * 0.05, span * 0.05);
+    v.target = clamp(v.value + bias, v.range[0], v.range[1]);
+  }
+
+  function tickVitals() {
+    // every second, push a new reading
+    for (const k in vitals) {
+      const v = vitals[k];
+      // ease toward target with small noise
+      v.value = lerp(v.value, v.target, 0.35) + rand(-0.6, 0.6);
+      v.value = clamp(v.value, v.range[0], v.range[1]);
+      v.history.push(v.value);
+      if (v.history.length > VITAL_BUFFER) v.history.shift();
+      // occasionally pick a new target — only when running disconnected
+      if (!apiAlive && Math.random() < 0.25) pickNewTarget(k);
+      renderVital(k);
+    }
+  }
+
+  // build sparkline path string
+  function sparkPath(history, w = 200, h = 38, pad = 2) {
+    if (!history.length) return { line: '', fill: '' };
+    const min = Math.min(...history);
+    const max = Math.max(...history);
+    const span = (max - min) || 1;
+    const n = history.length;
+    const pts = history.map((y, i) => {
+      const px = (i / (n - 1)) * (w - pad * 2) + pad;
+      const py = h - pad - ((y - min) / span) * (h - pad * 2);
+      return [px, py];
+    });
+    const line = 'M ' + pts.map(p => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L ');
+    const fill = line + ` L ${w - pad} ${h} L ${pad} ${h} Z`;
+    return { line, fill };
+  }
+
+  const lastDisplayed = { sys: null, dia: null, hr: null, glu: null };
+
+  function renderVital(k) {
+    const v = vitals[k];
+    const display = Math.round(v.value);
+    const elV = document.querySelector(`[data-bind="${k}"]`);
+    const elDelta = document.querySelector(`[data-bind="${k}-delta"]`);
+    const elLine = document.querySelector(`[data-bind="${k}-line"]`);
+    const elFill = document.querySelector(`[data-bind="${k}-fill"]`);
+    if (!elV) return;
+
+    if (lastDisplayed[k] !== display) {
+      counterUp(elV, lastDisplayed[k] ?? display, display, 380);
+      lastDisplayed[k] = display;
+    }
+
+    // delta vs previous reading
+    const prev = v.history[v.history.length - 2] ?? v.history[v.history.length - 1];
+    const diff = v.value - prev;
+    const dir = Math.abs(diff) < 0.4 ? 'flat' : diff > 0 ? 'up' : 'down';
+    const arrow = dir === 'up' ? '▲' : dir === 'down' ? '▼' : '–';
+    if (elDelta) {
+      elDelta.className = `delta ${dir}`;
+      elDelta.innerHTML = `${arrow} ${Math.abs(diff).toFixed(1)}`;
+    }
+
+    const { line, fill } = sparkPath(v.history);
+    if (elLine) elLine.setAttribute('d', line);
+    if (elFill) elFill.setAttribute('d', fill);
+  }
+
+  // counter-up animation
+  function counterUp(el, from, to, duration = 400) {
+    const start = performance.now();
+    const f = +from, t = +to;
+    if (f === t) { el.textContent = t; return; }
+    function step(now) {
+      const p = clamp((now - start) / duration, 0, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(f + (t - f) * ease);
+      if (p < 1) requestAnimationFrame(step);
+      else el.textContent = t;
+    }
+    requestAnimationFrame(step);
+  }
+
+  // ============================================================
+  // 3. CHD risk gauge
+  // ============================================================
+  const GAUGE_CIRC = 2 * Math.PI * 84;     // ≈ 527.79
+  const arc = $('#gauge-arc');
+  const riskValueEl = $('#risk-value');
+  const riskLabelEl = $('#risk-label');
+  let currentRisk = 12;
+  let displayedRisk = 12;
+
+  function colorForRisk(r) {
+    if (r < 20) return '#10b981';
+    if (r < 50) return '#f59e0b';
+    return '#ef4444';
+  }
+  function labelForRisk(r) {
+    if (r < 20) return { text: 'Riesgo bajo',     cls: 'level-low'  };
+    if (r < 50) return { text: 'Riesgo moderado', cls: 'level-mid'  };
+    return                 { text: 'Riesgo alto',     cls: 'level-high' };
+  }
+
+  function setRisk(r) {
+    r = clamp(r, 0, 100);
+    currentRisk = r;
+    const dash = (r / 100) * GAUGE_CIRC;
+    const color = colorForRisk(r);
+    arc.setAttribute('stroke-dasharray', `${dash} ${GAUGE_CIRC - dash}`);
+    arc.setAttribute('stroke', color);
+    arc.style.filter = `drop-shadow(0 0 8px ${color}aa)`;
+    const lab = labelForRisk(r);
+    riskLabelEl.textContent = lab.text;
+    riskLabelEl.className = `gauge-label ${lab.cls}`;
+    counterUp(riskValueEl, displayedRisk, Math.round(r), 600);
+    displayedRisk = Math.round(r);
+    riskValueEl.classList.remove('flash', 'flash-red');
+    void riskValueEl.offsetWidth;
+    riskValueEl.classList.add(r >= 50 ? 'flash-red' : 'flash');
+  }
+
+  function tickRisk() {
+    if (apiAlive) {
+      // when API is alive, setRisk + refreshShap are driven by pollState()
+      setLastTimestamp();
+      return;
+    }
+    // realistic-ish drift influenced by current vitals
+    const sysOver = Math.max(0, vitals.sys.value - 130) / 30;
+    const hrOver  = Math.max(0, vitals.hr.value  - 90)  / 25;
+    const gluOver = Math.max(0, vitals.glu.value - 110) / 50;
+    const base = 8 + sysOver * 22 + hrOver * 18 + gluOver * 16 + rand(-6, 14);
+    setRisk(clamp(base + rand(-4, 4), 2, 92));
+    // re-shuffle SHAP impacts to keep it dynamic
+    refreshShap();
+    // bump last-ts
+    setLastTimestamp();
+  }
+
+  // ============================================================
+  // 4. SHAP explanation
+  // ============================================================
+  const SHAP_FEATURES = [
+    { key: 'sys',   name: 'Presión sistólica',   unit: 'mmHg', baseline: 120, getValue: () => vitals.sys.value, posWhenAbove: true  },
+    { key: 'hr',    name: 'Frecuencia cardíaca', unit: 'bpm',  baseline: 75,  getValue: () => vitals.hr.value,  posWhenAbove: true  },
+    { key: 'glu',   name: 'Glucosa',             unit: 'mg/dL',baseline: 100, getValue: () => vitals.glu.value, posWhenAbove: true  },
+    { key: 'chol',  name: 'Colesterol total',    unit: 'mg/dL',baseline: 190, getValue: () => 175 + rand(-30, 60),  posWhenAbove: true },
+    { key: 'age',   name: 'Edad',                unit: 'años', baseline: 50,  getValue: () => 58 + rand(-2, 2),     posWhenAbove: true },
+    { key: 'bmi',   name: 'IMC',                 unit: 'kg/m²',baseline: 24,  getValue: () => 26 + rand(-3, 4),     posWhenAbove: true },
+    { key: 'smoke', name: 'Cigarrillos/día',     unit: 'cig',  baseline: 0,   getValue: () => rand(0, 12),          posWhenAbove: true },
+    { key: 'act',   name: 'Actividad física',    unit: 'min',  baseline: 30,  getValue: () => rand(10, 70),         posWhenAbove: false }
+  ];
+
+  const shapList = $('#shap-list');
+  let shapState = []; // current displayed top 5
+
+  function computeShap() {
+    // For each feature, compute a SHAP-like impact: how much it pushed risk
+    const feats = SHAP_FEATURES.map(f => {
+      const val = f.getValue();
+      const diff = val - f.baseline;
+      // direction: posWhenAbove means above baseline pushes risk up
+      const directional = f.posWhenAbove ? diff : -diff;
+      const scaled = directional / Math.max(1, Math.abs(f.baseline) || 30);
+      const impact = scaled * 100 * (0.6 + Math.random() * 0.6);
+      return {
+        key: f.key,
+        name: f.name,
+        unit: f.unit,
+        value: val,
+        impact: clamp(impact, -55, 70)
+      };
+    });
+    // sort by absolute impact, take top 5
+    feats.sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
+    return feats.slice(0, 5);
+  }
+
+  function formatVal(f) {
+    if (f.unit === 'min' || f.unit === 'cig' || f.unit === 'años') return Math.round(f.value);
+    if (f.unit === 'kg/m²') return f.value.toFixed(1);
+    return Math.round(f.value);
+  }
+
+  function refreshShap() {
+    const next = computeShap();
+    const maxAbs = Math.max(...next.map(f => Math.abs(f.impact))) || 1;
+
+    // Build / update rows
+    const existingByKey = {};
+    shapState.forEach(r => existingByKey[r.key] = r);
+
+    shapList.innerHTML = '';
+    next.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'shap-row';
+      const widthPct = (Math.abs(f.impact) / maxAbs) * 50; // 50% = full half-width
+      const dir = f.impact >= 0 ? 'pos' : 'neg';
+      row.innerHTML = `
+        <div class="shap-name">${f.name}<span class="feat-val">${formatVal(f)} ${f.unit}</span></div>
+        <div class="shap-track">
+          <div class="shap-bar ${dir}" style="width:${widthPct.toFixed(1)}%"></div>
+        </div>
+        <div class="shap-impact ${dir}">${f.impact >= 0 ? '+' : '−'}${Math.abs(f.impact).toFixed(1)}</div>
+      `;
+      shapList.appendChild(row);
+    });
+    shapState = next;
+  }
+
+  // ============================================================
+  // 5. Footer timestamps
+  // ============================================================
+  function setLastTimestamp() {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    $('#last-ts').textContent = `${hh}:${mm}:${ss}`;
+    $('#latency').textContent = `${Math.round(rand(8, 22))} ms`;
+  }
+
+  // ============================================================
+  // 6. Boot
+  // ============================================================
+  function setupSplash() {
+    const splash = document.getElementById('splash');
+    const btn = document.getElementById('splash-start');
+    // populate splash ECG with a long tiled path
+    const splashPath = document.getElementById('splash-ecg-path');
+    if (splashPath) {
+      const baseD = buildECGPath();
+      // tile 4× (4 × 600 = 2400 wide)
+      const segs = [];
+      for (let i = 0; i < 4; i++) {
+        segs.push(baseD.replace(/M (-?[\d.]+) (-?[\d.]+)/g, (m, x, y) => `M ${parseFloat(x) + i * 600} ${y}`)
+                       .replace(/L (-?[\d.]+) (-?[\d.]+)/g, (m, x, y) => `L ${parseFloat(x) + i * 600} ${y}`)
+                       .replace(/Q (-?[\d.]+) (-?[\d.]+), (-?[\d.]+) (-?[\d.]+)/g,
+                               (m, x1, y1, x2, y2) => `Q ${parseFloat(x1) + i * 600} ${y1}, ${parseFloat(x2) + i * 600} ${y2}`));
+      }
+      splashPath.setAttribute('d', segs.join(' '));
+    }
+    function dismiss() {
+      splash.setAttribute('data-hidden', 'true');
+      setTimeout(() => splash.remove(), 800);
+    }
+    btn.addEventListener('click', dismiss);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        if (document.body.contains(splash) && splash.getAttribute('data-hidden') !== 'true') {
+          e.preventDefault();
+          dismiss();
+        }
+      }
+    });
+  }
+
+  // ============================================================
+  // 7. Backend bridge (FastAPI /api/state)
+  // ============================================================
+  let apiAlive = false;
+  let apiFailures = 0;
+  const API_URL = '/api/state';
+
+  const VITAL_KEY_MAP = { sys: 'sys', dia: 'dia', hr: 'hr', glu: 'glu' };
+  const SHAP_LABELS = {
+    sysBP:        'Presión sistólica',
+    diaBP:        'Presión diastólica',
+    heartRate:    'Frecuencia cardíaca',
+    glucose:      'Glucosa',
+    totChol:      'Colesterol total',
+    age:          'Edad',
+    BMI:          'IMC',
+    cigsPerDay:   'Cigarrillos/día',
+    male:         'Sexo (M)',
+    education:    'Educación',
+    currentSmoker:'Fumador actual',
+    BPMeds:       'Medicación HTA',
+    prevalentStroke: 'ACV previo',
+    prevalentHyp: 'Hipertensión previa',
+    diabetes:     'Diabetes',
+  };
+
+  function applyApiVitals(apiVitals) {
+    if (!apiVitals) return;
+    Object.entries(VITAL_KEY_MAP).forEach(([uiKey, apiKey]) => {
+      const raw = apiVitals[apiKey];
+      if (raw === null || raw === undefined || Number.isNaN(+raw)) return;
+      const v = vitals[uiKey];
+      if (!v) return;
+      const value = clamp(+raw, v.range[0], v.range[1]);
+      v.target = value;   // tickVitals eases toward this each second
+    });
+  }
+
+  function refreshShapFromApi(shapArr) {
+    if (!Array.isArray(shapArr) || shapArr.length === 0) return false;
+    const feats = shapArr
+      .map(s => ({
+        key: s.name,
+        name: SHAP_LABELS[s.name] || s.name,
+        unit: '',
+        value: '',
+        impact: clamp(+s.impact * 100, -100, 100),
+      }))
+      .sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact))
+      .slice(0, 5);
+
+    const maxAbs = Math.max(...feats.map(f => Math.abs(f.impact))) || 1;
+    shapList.innerHTML = '';
+    feats.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'shap-row';
+      const widthPct = (Math.abs(f.impact) / maxAbs) * 50;
+      const dir = f.impact >= 0 ? 'pos' : 'neg';
+      row.innerHTML = `
+        <div class="shap-name">${f.name}</div>
+        <div class="shap-track">
+          <div class="shap-bar ${dir}" style="width:${widthPct.toFixed(1)}%"></div>
+        </div>
+        <div class="shap-impact ${dir}">${f.impact >= 0 ? '+' : '−'}${Math.abs(f.impact).toFixed(1)}</div>
+      `;
+      shapList.appendChild(row);
+    });
+    shapState = feats;
+    return true;
+  }
+
+  async function pollState() {
+    try {
+      const res = await fetch(API_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      apiAlive = true;
+      apiFailures = 0;
+
+      applyApiVitals(data.vitals);
+
+      if (typeof data.risk_pct === 'number') {
+        setRisk(data.risk_pct);
+      }
+
+      refreshShapFromApi(data.shap);
+
+      if (data.patient_id !== undefined && data.patient_id !== null) {
+        const pid = document.getElementById('patient-id');
+        if (pid) pid.textContent = `DT-${String(data.patient_id).padStart(4, '0')}`;
+      }
+
+      setLastTimestamp();
+    } catch (err) {
+      apiFailures += 1;
+      if (apiFailures >= 3) apiAlive = false;
+    }
+  }
+
+  function boot() {
+    setupSplash();
+    setupECG();
+    // initial render
+    Object.keys(vitals).forEach(renderVital);
+    setRisk(currentRisk);
+    refreshShap();
+    setLastTimestamp();
+
+    // streams
+    setInterval(tickVitals, 1000);   // 1 Hz vitals (eases to target)
+    setInterval(tickRisk,   3000);   // fallback when API is dead
+    setInterval(pollState,  1000);   // 1 Hz pull from FastAPI
+    pollState();                     // first read immediately
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+</body>
+</html>

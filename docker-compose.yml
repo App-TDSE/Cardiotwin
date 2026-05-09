@@ -78,10 +78,12 @@ services:
       - "8501:8501"
     environment:
       - DB_PATH=/data/cardiotwin.db
-      - REFRESH_MS=1000
+      - INDEX_PATH=/app/static/index.html
+      - HISTORY_LEN=60
       - PYTHONUNBUFFERED=1
     volumes:
       - shared-data:/data:ro
+      - ./index.html:/app/static/index.html:ro
     networks:
       - cardiotwin-net
     restart: unless-stopped

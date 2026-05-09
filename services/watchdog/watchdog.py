@@ -40,10 +40,17 @@ def init_db():
             patient_id TEXT,
             sysBP REAL,
             diaBP REAL,
-            heartRate REAL
+            heartRate REAL,
+            glucose REAL
         )
     ''')
-    
+
+    # Compatibilidad con DB pre-existente: añade glucose si no existe
+    cursor.execute("PRAGMA table_info(telemetry)")
+    cols = {row[1] for row in cursor.fetchall()}
+    if "glucose" not in cols:
+        cursor.execute("ALTER TABLE telemetry ADD COLUMN glucose REAL")
+
     conn.commit()
     conn.close()
 
@@ -75,13 +82,14 @@ def on_message(client, userdata, msg):
             
         elif topic == "cardiotwin/telemetry/raw":
             cursor.execute('''
-                INSERT INTO telemetry (patient_id, sysBP, diaBP, heartRate)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO telemetry (patient_id, sysBP, diaBP, heartRate, glucose)
+                VALUES (?, ?, ?, ?, ?)
             ''', (
                 payload.get('patient_id', 'unknown'),
                 payload.get('sysBP', 0.0),
                 payload.get('diaBP', 0.0),
-                payload.get('heartRate', 0.0)
+                payload.get('heartRate', 0.0),
+                payload.get('glucose'),
             ))
 
         conn.commit()

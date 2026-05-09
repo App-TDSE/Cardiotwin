@@ -1,112 +1,97 @@
-import streamlit as st
-import sqlite3
-import pandas as pd
-import plotly.express as px
-import os
 import json
+import os
+import sqlite3
+from typing import Any
 
-# Configuración
+from fastapi import FastAPI
+from fastapi.responses import FileResponse, JSONResponse
+
 DB_PATH = os.getenv("DB_PATH", "/data/cardiotwin.db")
+INDEX_PATH = os.getenv("INDEX_PATH", "/app/static/index.html")
+HISTORY_LEN = int(os.getenv("HISTORY_LEN", "60"))
 
-st.set_page_config(
-    page_title="CardioTwin Digital Twin",
-    page_icon="❤️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+app = FastAPI(title="CardioTwin Dashboard")
 
-# Estilo personalizado para el semáforo y estética premium
-st.markdown("""
-    <style>
-    .main { background-color: #f5f7f9; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .risk-high { color: #ff4b4b; font-weight: bold; }
-    .risk-med { color: #ffa500; font-weight: bold; }
-    .risk-low { color: #00c853; font-weight: bold; }
-    </style>
-    """, unsafe_allow_html=True)
 
-def get_data(query):
+def _query(sql: str, params: tuple = ()) -> list[dict[str, Any]]:
+    if not os.path.exists(DB_PATH):
+        return []
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     try:
-        conn = sqlite3.connect(DB_PATH)
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        return df
-    except Exception as e:
-        return pd.DataFrame()
+        rows = conn.execute(sql, params).fetchall()
+    except sqlite3.OperationalError:
+        rows = []
+    conn.close()
+    return [dict(r) for r in rows]
 
-st.title("🫀 CardioTwin: Monitor de Gemelo Digital")
-st.write("Visualización en tiempo real de riesgo coronario (CHD) a 10 años.")
 
-# Layout principal
-col_metrics, col_history = st.columns([1, 2])
+def _has_column(table: str, column: str) -> bool:
+    cols = _query(f"PRAGMA table_info({table})")
+    return any(c["name"] == column for c in cols)
 
-# Obtener últimos datos de telemetría y predicciones
-df_telemetry = get_data("SELECT * FROM telemetry ORDER BY timestamp DESC LIMIT 10")
-df_predictions = get_data("SELECT * FROM predictions ORDER BY timestamp DESC LIMIT 20")
 
-with col_metrics:
-    st.subheader("Signos Vitales (Real-time)")
-    if not df_telemetry.empty:
-        latest_t = df_telemetry.iloc[0]
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Presión Sistólica", f"{latest_t['sysBP']:.1f}", "mmHg")
-        c2.metric("Presión Diastólica", f"{latest_t['diaBP']:.1f}", "mmHg")
-        c3.metric("Frec. Cardíaca", f"{latest_t['heartRate']:.0f}", "bpm")
-    else:
-        st.info("Esperando datos de telemetría...")
+@app.get("/api/state")
+def state():
+    glucose_col = ", glucose" if _has_column("telemetry", "glucose") else ""
 
-    st.divider()
-    
-    st.subheader("Semáforo de Riesgo Coronario")
-    if not df_predictions.empty:
-        latest_p = df_predictions.iloc[0]
-        risk = latest_p['risk_pct'] * 100
-        
-        if risk > 50:
-            st.error(f"RIESGO ALTO: {risk:.1f}%")
-        elif risk > 20:
-            st.warning(f"RIESGO MODERADO: {risk:.1f}%")
-        else:
-            st.success(f"RIESGO BAJO: {risk:.1f}%")
-            
-        st.progress(min(risk/100, 1.0))
-    else:
-        st.info("Calculando predicciones iniciales...")
+    telemetry = _query(
+        f"SELECT patient_id, sysBP, diaBP, heartRate{glucose_col}, timestamp "
+        "FROM telemetry ORDER BY id DESC LIMIT ?",
+        (HISTORY_LEN,),
+    )
+    predictions = _query(
+        "SELECT patient_id, risk_pct, shap_json, timestamp "
+        "FROM predictions ORDER BY id DESC LIMIT ?",
+        (HISTORY_LEN,),
+    )
 
-with col_history:
-    st.subheader("Evolución del Riesgo")
-    if not df_predictions.empty:
-        fig = px.line(df_predictions, x='timestamp', y='risk_pct', 
-                      title="Tendencia de Probabilidad de CHD",
-                      labels={'risk_pct': 'Probabilidad', 'timestamp': 'Tiempo'})
-        fig.update_layout(template="plotly_white")
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("Gráfico de tendencia pendiente de datos...")
+    latest_t = telemetry[0] if telemetry else {}
+    latest_p = predictions[0] if predictions else {}
 
-st.divider()
+    shap_dict: dict[str, float] = {}
+    if latest_p.get("shap_json"):
+        try:
+            shap_dict = json.loads(latest_p["shap_json"])
+        except Exception:
+            shap_dict = {}
 
-# Sección de Explicabilidad (SHAP)
-st.subheader("🧠 Explicabilidad Clínica (Valores SHAP)")
-if not df_predictions.empty:
-    latest_shap = json.loads(df_predictions.iloc[0]['shap_json'])
-    if latest_shap:
-        # Convertir SHAP a DataFrame para visualización simple
-        shap_df = pd.DataFrame(list(latest_shap.items()), columns=['Característica', 'Impacto'])
-        shap_df = shap_df.sort_values(by='Impacto', ascending=False).head(5)
-        fig_shap = px.bar(shap_df, x='Impacto', y='Característica', orientation='h',
-                          title="Top 5 Factores que aumentan el riesgo actual",
-                          color='Impacto', color_continuous_scale='Reds')
-        st.plotly_chart(fig_shap, use_container_width=True)
-    else:
-        st.write("Cargando matriz de importancia...")
-else:
-    st.write("Los valores SHAP se mostrarán aquí una vez inicie el motor de inferencia.")
+    risk_pct_raw = latest_p.get("risk_pct")
+    risk_pct = float(risk_pct_raw) * 100 if risk_pct_raw is not None else None
 
-# Auto-refresh cada 1 segundo
-st.empty()
-time_placeholder = st.sidebar.empty()
-import time
-time.sleep(1)
-st.rerun()
+    return {
+        "patient_id": latest_p.get("patient_id") or latest_t.get("patient_id"),
+        "vitals": {
+            "sys": latest_t.get("sysBP"),
+            "dia": latest_t.get("diaBP"),
+            "hr": latest_t.get("heartRate"),
+            "glu": latest_t.get("glucose"),
+        },
+        "vitals_history": list(reversed(telemetry)),
+        "risk_pct": risk_pct,
+        "risk_history": [
+            {
+                "risk_pct": (float(r["risk_pct"]) * 100) if r["risk_pct"] is not None else None,
+                "timestamp": r["timestamp"],
+            }
+            for r in reversed(predictions)
+        ],
+        "shap": [{"name": k, "impact": float(v)} for k, v in shap_dict.items()],
+        "timestamp": latest_p.get("timestamp") or latest_t.get("timestamp"),
+    }
+
+
+@app.get("/api/health")
+def health():
+    return JSONResponse(
+        {
+            "ok": True,
+            "db": os.path.exists(DB_PATH),
+            "db_path": DB_PATH,
+        }
+    )
+
+
+@app.get("/")
+def root():
+    return FileResponse(INDEX_PATH)
