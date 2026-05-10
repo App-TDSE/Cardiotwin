@@ -882,6 +882,440 @@
     color: var(--accent);
   }
   .splash-credentials .lk svg { width: 11px; height: 11px; }
+
+  /* ============================== STREAMLIT DASHBOARD SECTION ============================== */
+  .sl-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 6px;
+  }
+  .sl-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sl-eyebrow::before { display: none; }
+  .sl-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan);
+  }
+  .sl-eyebrow-tag {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.06em;
+    text-transform: none;
+    font-weight: 500;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+
+  .sl-card {
+    background: linear-gradient(180deg, rgba(19,27,46,0.72), rgba(17,24,39,0.55));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px 26px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+  }
+  .sl-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(700px 220px at 50% -10%, rgba(6,182,212,0.07), transparent 70%),
+      radial-gradient(500px 300px at 100% 110%, rgba(229,62,62,0.05), transparent 70%);
+    pointer-events: none;
+  }
+
+  .sl-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 22px;
+    position: relative;
+    z-index: 1;
+  }
+  .sl-title-block { display: flex; flex-direction: column; gap: 6px; }
+  .sl-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .sl-title-accent {
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+  .sl-subtitle {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-mute);
+    line-height: 1.4;
+  }
+  .sl-head-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .sl-head-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    background: rgba(6,182,212,0.08);
+    border: 1px solid rgba(6,182,212,0.28);
+    color: #7dd3fc;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+  }
+  .sl-pulse {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+    animation: heartbeat 1.6s ease-in-out infinite;
+  }
+  .sl-head-time {
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+  }
+
+  .sl-block {
+    position: relative;
+    z-index: 1;
+    display: flex; flex-direction: column;
+    gap: 14px;
+  }
+  .sl-block-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .sl-block-sub {
+    font-size: 10px;
+    color: var(--text-mute);
+    opacity: 0.7;
+    letter-spacing: 0.10em;
+  }
+
+  .sl-vitals-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .sl-vital {
+    background: rgba(13,19,34,0.6);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px 14px;
+    display: flex; flex-direction: column; gap: 6px;
+    transition: border-color 200ms ease;
+  }
+  .sl-vital:hover { border-color: var(--border-strong); }
+  .sl-vital-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+  }
+  .sl-vital-label .sl-unit {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-mute);
+    opacity: 0.75;
+    margin-left: 2px;
+  }
+  .sl-vital-value {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    line-height: 1;
+    margin-top: 2px;
+  }
+  .sl-vital-bar {
+    margin-top: 6px;
+    height: 3px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .sl-vital-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    box-shadow: 0 0 10px -2px currentColor;
+  }
+
+  .sl-split {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) 1fr;
+    gap: 24px;
+    position: relative;
+    z-index: 1;
+  }
+  .sl-pane {
+    display: flex; flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  /* Semaphore */
+  .sl-semaphore-card {
+    background: rgba(13,19,34,0.6);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 18px 18px 20px;
+    display: flex; flex-direction: column;
+    gap: 14px;
+    align-items: center;
+    text-align: center;
+  }
+  .sl-semaphore-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.04em;
+  }
+  .sl-semaphore {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 6px 4px;
+  }
+  .sl-light {
+    position: relative;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    display: grid; place-items: end center;
+    color: rgba(255,255,255,0.0);
+    transition: color 250ms ease;
+  }
+  .sl-light-low.active {
+    background: radial-gradient(circle at 35% 30%, #34d399, #059669 70%);
+    border-color: rgba(16,185,129,0.45);
+    box-shadow:
+      0 0 18px 2px rgba(16,185,129,0.55),
+      0 0 0 1px rgba(16,185,129,0.4) inset;
+  }
+  .sl-light-mid {
+    background: radial-gradient(circle at 35% 30%, #4a3a1a, #2a2010 70%);
+    border-color: rgba(245,158,11,0.18);
+  }
+  .sl-light-high {
+    background: radial-gradient(circle at 35% 30%, #4a1a1a, #2a1010 70%);
+    border-color: rgba(229,62,62,0.20);
+  }
+  .sl-light-glow {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(16,185,129,0.35), transparent 65%);
+    pointer-events: none;
+    animation: heartbeat 1.4s ease-in-out infinite;
+  }
+  .sl-light-label {
+    position: absolute;
+    bottom: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 9px;
+    color: var(--text-mute);
+    letter-spacing: 0.10em;
+    font-weight: 600;
+  }
+  .sl-light.active .sl-light-label { color: #6ee7b7; }
+
+  .sl-prob {
+    margin-top: 14px;
+    display: flex; flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .sl-prob-value {
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: #34d399;
+    text-shadow: 0 0 24px rgba(16,185,129,0.45);
+  }
+  .sl-prob-pct {
+    font-size: 22px;
+    color: #6ee7b7;
+    font-weight: 500;
+    margin-left: 2px;
+  }
+  .sl-prob-caption {
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.06em;
+  }
+  .sl-prob-meter {
+    margin-top: 8px;
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+  }
+  .sl-prob-meter-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    box-shadow: 0 0 12px rgba(16,185,129,0.6);
+    border-radius: 3px;
+  }
+  .sl-prob-meter-tick {
+    position: absolute;
+    top: -2px; bottom: -2px;
+    width: 1px;
+    background: var(--border-strong);
+  }
+  .sl-prob-scale {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 9.5px;
+    color: var(--text-mute);
+    margin-top: 4px;
+    letter-spacing: 0.04em;
+  }
+
+  /* SHAP plot */
+  .sl-shap {
+    background: rgba(13,19,34,0.6);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 18px 18px 14px;
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 8px;
+    flex: 1;
+    min-height: 240px;
+  }
+  .sl-shap-yaxis {
+    display: flex; flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-end;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 9.5px;
+    color: var(--text-mute);
+    padding-bottom: 24px;
+    padding-top: 4px;
+  }
+  .sl-shap-plot {
+    position: relative;
+    display: flex; flex-direction: column;
+  }
+  .sl-shap-grid {
+    position: absolute;
+    inset: 4px 0 24px 0;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        transparent 0,
+        transparent calc(20% - 1px),
+        rgba(255,255,255,0.04) calc(20% - 1px),
+        rgba(255,255,255,0.04) 20%
+      );
+    pointer-events: none;
+  }
+  .sl-shap-bars {
+    position: relative;
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+    align-items: end;
+    padding-bottom: 24px;
+  }
+  .sl-shap-col {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+  }
+  .sl-shap-bar {
+    width: 100%;
+    max-width: 110px;
+    background: linear-gradient(180deg, rgba(6,182,212,0.85), rgba(6,182,212,0.55));
+    border: 1px solid rgba(6,182,212,0.5);
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    box-shadow: 0 0 18px -4px rgba(6,182,212,0.55);
+    position: relative;
+    transition: height 600ms cubic-bezier(.22,.61,.36,1);
+  }
+  .sl-shap-bar-val {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    color: #7dd3fc;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .sl-shap-xlabel {
+    position: absolute;
+    bottom: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .sl-shap-foot {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-mute);
+    display: flex; align-items: center;
+  }
+  .sl-shap-key { display: inline-flex; align-items: center; gap: 8px; }
+  .sl-shap-swatch {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, rgba(6,182,212,0.85), rgba(6,182,212,0.55));
+  }
+
+  @media (max-width: 1100px) {
+    .sl-vitals-grid { grid-template-columns: repeat(2, 1fr); }
+    .sl-split { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -1172,12 +1606,128 @@
   </main>
 
   <!-- ================================ STREAMLIT DASHBOARD ================================ -->
-  <section style="margin-top: 24px; margin-bottom: 24px; display: flex; flex-direction: column; gap: 14px;">
-    <div style="display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute); padding: 0 4px;">
-      <span style="width: 4px; height: 4px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan);"></span>
+  <section class="sl-section" aria-label="Streamlit Dashboard">
+    <div class="col-title sl-eyebrow">
+      <span class="sl-dot"></span>
       Streamlit Dashboard
+      <span class="sl-eyebrow-tag">localhost:8502 · live</span>
     </div>
-    <iframe src="http://localhost:8502" width="100%" height="800px" style="border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-2); box-shadow: var(--shadow-card);"></iframe>
+
+    <div class="sl-card">
+      <header class="sl-head">
+        <div class="sl-title-block">
+          <h2 class="sl-title">CardioTwin <span class="sl-title-accent">Digital Dashboard</span></h2>
+          <p class="sl-subtitle">Snapshot del último ciclo de inferencia · paciente virtual <span class="mono">DT-8635</span></p>
+        </div>
+        <div class="sl-head-meta">
+          <span class="sl-head-badge"><span class="sl-pulse"></span>streaming</span>
+          <span class="sl-head-time mono num" id="sl-time">21:59:58</span>
+        </div>
+      </header>
+
+      <!-- Latest Vital Signs -->
+      <div class="sl-block">
+        <div class="sl-block-title">Latest Vital Signs</div>
+        <div class="sl-vitals-grid">
+          <div class="sl-vital">
+            <div class="sl-vital-label">Systolic BP <span class="sl-unit">(mmHg)</span></div>
+            <div class="sl-vital-value num">110.6</div>
+            <div class="sl-vital-bar"><span style="width:55%; background: var(--accent);"></span></div>
+          </div>
+          <div class="sl-vital">
+            <div class="sl-vital-label">Diastolic BP <span class="sl-unit">(mmHg)</span></div>
+            <div class="sl-vital-value num">74.8</div>
+            <div class="sl-vital-bar"><span style="width:48%; background: #fb923c;"></span></div>
+          </div>
+          <div class="sl-vital">
+            <div class="sl-vital-label">Heart Rate <span class="sl-unit">(bpm)</span></div>
+            <div class="sl-vital-value num">61.0</div>
+            <div class="sl-vital-bar"><span style="width:30%; background: #f87171;"></span></div>
+          </div>
+          <div class="sl-vital">
+            <div class="sl-vital-label">Glucose <span class="sl-unit">(mg/dL)</span></div>
+            <div class="sl-vital-value num">89.0</div>
+            <div class="sl-vital-bar"><span style="width:42%; background: var(--cyan);"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk + SHAP -->
+      <div class="sl-split">
+        <!-- Cardiovascular Risk -->
+        <div class="sl-pane">
+          <div class="sl-block-title">Cardiovascular Risk</div>
+          <div class="sl-semaphore-card">
+            <div class="sl-semaphore-title">Risk Assessment Semaphore</div>
+
+            <div class="sl-semaphore">
+              <div class="sl-light sl-light-low active" title="Bajo">
+                <span class="sl-light-glow"></span>
+                <span class="sl-light-label">LOW</span>
+              </div>
+              <div class="sl-light sl-light-mid" title="Moderado">
+                <span class="sl-light-label">MOD</span>
+              </div>
+              <div class="sl-light sl-light-high" title="Alto">
+                <span class="sl-light-label">HIGH</span>
+              </div>
+            </div>
+
+            <div class="sl-prob">
+              <div class="sl-prob-value num">4.1<span class="sl-prob-pct">%</span></div>
+              <div class="sl-prob-caption">Predicted Probability</div>
+            </div>
+
+            <div class="sl-prob-meter">
+              <div class="sl-prob-meter-fill" style="width:4.1%;"></div>
+              <div class="sl-prob-meter-tick" style="left:20%;"></div>
+              <div class="sl-prob-meter-tick" style="left:50%;"></div>
+            </div>
+            <div class="sl-prob-scale">
+              <span>0%</span><span>20%</span><span>50%</span><span>100%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SHAP -->
+        <div class="sl-pane">
+          <div class="sl-block-title">Most Influential Variables <span class="sl-block-sub">(SHAP)</span></div>
+
+          <div class="sl-shap">
+            <div class="sl-shap-yaxis">
+              <span>0.0</span><span>−0.2</span><span>−0.4</span><span>−0.6</span><span>−0.8</span><span>−1.0</span>
+            </div>
+            <div class="sl-shap-plot">
+              <div class="sl-shap-grid"></div>
+              <div class="sl-shap-bars">
+                <div class="sl-shap-col">
+                  <div class="sl-shap-bar" style="height:88%;">
+                    <span class="sl-shap-bar-val">−0.88</span>
+                  </div>
+                  <div class="sl-shap-xlabel">Cholesterol</div>
+                </div>
+                <div class="sl-shap-col">
+                  <div class="sl-shap-bar" style="height:70%;">
+                    <span class="sl-shap-bar-val">−0.70</span>
+                  </div>
+                  <div class="sl-shap-xlabel">Systolic BP</div>
+                </div>
+                <div class="sl-shap-col">
+                  <div class="sl-shap-bar" style="height:38%;">
+                    <span class="sl-shap-bar-val">−0.38</span>
+                  </div>
+                  <div class="sl-shap-xlabel">Glucose</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sl-shap-foot">
+            <span class="sl-shap-key"><span class="sl-shap-swatch"></span>Negative SHAP value · pushes risk down</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ================================ FOOTER ================================ -->
