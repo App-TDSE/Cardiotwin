@@ -1,0 +1,31 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - git
+
+runcmd:
+  # Install Docker
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  - echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  - sudo apt-get update
+  - sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin docker-compose
+  
+  # Add azureuser to docker group
+  - sudo usermod -aG docker azureuser
+
+  # Clone the Repository
+  - cd /home/azureuser
+  - git clone -b develop https://github.com/App-TDSE/Cardiotwin.git
+  - chown -R azureuser:azureuser Cardiotwin
+
+  # Start the application
+  - cd Cardiotwin
+  - docker-compose up --build -d

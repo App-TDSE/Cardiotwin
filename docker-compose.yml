@@ -74,8 +74,6 @@ services:
     depends_on:
       engine:
         condition: service_started
-    ports:
-      - "8501:8501"
     environment:
       - DB_PATH=/data/cardiotwin.db
       - INDEX_PATH=/app/static/index.html
@@ -96,9 +94,8 @@ services:
     depends_on:
       engine:
         condition: service_started
-    ports:
-      - "8502:8501"
     environment:
+      - STREAMLIT_SERVER_BASE_URL_PATH=/streamlit
       - DB_PATH=/data/cardiotwin.db
       - PYTHONUNBUFFERED=1
     volumes:
@@ -124,6 +121,19 @@ services:
       - cardiotwin-net
     restart: unless-stopped
 
+  nginx:
+    image: nginx:alpine
+    container_name: cardiotwin-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - dashboard
+      - dashboard-st
+    networks:
+      - cardiotwin-net
+    restart: unless-stopped
 
 networks:
   cardiotwin-net:

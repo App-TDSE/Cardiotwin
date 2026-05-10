@@ -38,13 +38,31 @@ Para conectar tu reloj inteligente y que el dashboard se actualice en tiempo rea
 
 Al recibir el paquete JSON en ese tópico, el sistema automáticamente ejecutará el modelo de ML y actualizará la interfaz en la pantalla de forma instantánea.
 
-## Estrategia de Despliegue a Producción (Deploy)
+## Despliegue en Azure con Terraform
 
-Al estar orquestado con `docker-compose`, llevar el ecosistema a producción es muy directo:
+El proyecto incluye infraestructura como código (IaC) en la carpeta `infra/` para automatizar completamente el despliegue en Microsoft Azure.
 
-1. **Infraestructura Cloud (VM)**: La solución más sencilla es desplegar una Máquina Virtual (por ejemplo, EC2 en AWS o VM en Azure), clonar el repositorio y ejecutar `docker-compose up -d`.
-2. **Reverse Proxy (Nginx/Traefik)**: Es fundamental exponer únicamente el puerto `8501` usando un proxy inverso y configurar certificados SSL/TLS. Esto protegerá la interfaz (HTTPS) y permitirá conexiones seguras (MQTTS) para los smartwatches remotos.
-3. **Persistencia de Base de Datos**: Actualmente, `cardiotwin.db` utiliza SQLite montado en un volumen compartido. Para escalar a múltiples usuarios simultáneos, el `engine` puede ser configurado fácilmente para apuntar a un servicio como PostgreSQL alojado en la nube.
+### Crear la Infraestructura (Despliegue)
+1. Inicia sesión en tu cuenta de Azure desde la terminal:
+   ```bash
+   az login
+   ```
+2. Navega a la carpeta de infraestructura y aplica los cambios:
+   ```bash
+   cd infra
+   terraform init
+   terraform apply
+   ```
+3. Escribe `yes` cuando se te solicite. Al terminar (aprox. 3-5 minutos), la terminal te mostrará una IP Pública.
+4. Abre esa IP en tu navegador (ej. `http://20.12.34.56`) para acceder a CardioTwin. El servidor habrá instalado Docker y descargado el repositorio automáticamente.
+
+### Eliminar la Infraestructura (Destrucción)
+Para evitar cobros en tu cuenta de Azure cuando ya no estés usando el proyecto, es **muy importante** que destruyas los recursos:
+```bash
+cd infra
+terraform destroy
+```
+Escribe `yes` cuando se te solicite. Esto borrará la máquina virtual y la IP, deteniendo cualquier costo.
 
 ## Validación y Pruebas (End-to-End)
 
