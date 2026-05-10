@@ -62,6 +62,7 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - ./data:/data:ro
+      - shared-data:/shared:ro
     networks:
       - cardiotwin-net
     restart: unless-stopped
@@ -79,8 +80,10 @@ services:
       - INDEX_PATH=/app/static/index.html
       - HISTORY_LEN=60
       - PYTHONUNBUFFERED=1
+    ports:
+      - "8501:8501"
     volumes:
-      - shared-data:/data:ro
+      - shared-data:/data
       - ./index.html:/app/static/index.html:ro
     networks:
       - cardiotwin-net

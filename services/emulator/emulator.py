@@ -92,17 +92,50 @@ def main():
     )
 
     try:
-        for idx, row in df.iterrows():
-            payload = {k: clean(v) for k, v in row.to_dict().items()}
+        target_idx = 0
+        base_row = df.iloc[target_idx]
+        base_payload = {k: clean(v) for k, v in base_row.to_dict().items()}
+        patient_id = int(target_idx)
+        
+        current_vitals = {}
+        for field in NOISY_FIELDS:
+            val = base_payload.get(field)
+            if val is not None:
+                current_vitals[field] = float(val)
 
-            for field in NOISY_FIELDS:
-                base = payload.get(field)
-                if base is None:
-                    continue
-                noisy = float(base) + float(rng.normal(NOISE_MU, NOISE_SIGMA))
+        print(f"[emulator] Running in Single Patient Mode. Selected Patient ID: {patient_id}", flush=True)
+
+        custom_patient_file = "/shared/custom_patient.json"
+        custom_mtime = 0
+
+        while True:
+            if os.path.exists(custom_patient_file):
+                mtime = os.path.getmtime(custom_patient_file)
+                if mtime > custom_mtime:
+                    try:
+                        with open(custom_patient_file, "r") as f:
+                            new_base = json.load(f)
+                        base_payload = new_base
+                        patient_id = 9999
+                        custom_mtime = mtime
+                        for field in NOISY_FIELDS:
+                            val = base_payload.get(field)
+                            if val is not None:
+                                current_vitals[field] = float(val)
+                        print("[emulator] Switched to Custom Patient Mode from form data!", flush=True)
+                    except Exception as e:
+                        print(f"[emulator] Failed to load custom patient: {e}")
+
+            payload = base_payload.copy()
+
+            for field in current_vitals:
+                current_vitals[field] += float(rng.normal(0, NOISE_SIGMA * 0.2))
+                base_val = float(base_payload[field])
+                current_vitals[field] = current_vitals[field] * 0.95 + base_val * 0.05
+                
+                noisy = current_vitals[field] + float(rng.normal(NOISE_MU, NOISE_SIGMA * 0.5))
                 payload[field] = round(noisy, 2)
 
-            patient_id = int(idx)
             now = datetime.now(timezone.utc)
             payload["patient_id"] = patient_id
             payload["timestamp"] = now.timestamp()
@@ -132,7 +165,7 @@ def main():
 
             client.publish(MQTT_TOPIC, json.dumps(payload, default=str))
             print(
-                f"[emulator] #{idx} sysBP={payload.get('sysBP')} "
+                f"[emulator] #{patient_id} sysBP={payload.get('sysBP')} "
                 f"diaBP={payload.get('diaBP')} hr={payload.get('heartRate')} "
                 f"fhir_obs={len(observations)}",
                 flush=True,

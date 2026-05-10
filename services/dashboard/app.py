@@ -169,6 +169,12 @@ def predict(req: PredictRequest):
         for _, row in top.iterrows()
     ]
 
+    try:
+        with open("/data/custom_patient.json", "w") as f:
+            json.dump(payload, f)
+    except Exception as e:
+        print(f"Failed to save custom patient: {e}")
+
     return {
         "prediction": prediction,
         "risk_pct": probability * 100,

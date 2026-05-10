@@ -15,7 +15,7 @@ COPY engine.py train.py ./
 
 # Si el modelo ya está entrenado y commiteado, se copia.
 # Si no, se entrena al inicio del contenedor (ver entrypoint).
-COPY model.pkl* ./
+# COPY model.pkl* ./
 
 RUN useradd -m -u 1000 cardio && \
     mkdir -p /data && chown -R cardio:cardio /app /data
