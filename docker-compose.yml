@@ -88,6 +88,25 @@ services:
       - cardiotwin-net
     restart: unless-stopped
 
+  dashboard-st:
+    build:
+      context: ./services/dashboard-st
+      dockerfile: Dockerfile
+    container_name: cardiotwin-dashboard-st
+    depends_on:
+      engine:
+        condition: service_started
+    ports:
+      - "8502:8501"
+    environment:
+      - DB_PATH=/data/cardiotwin.db
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - shared-data:/data:ro
+    networks:
+      - cardiotwin-net
+    restart: unless-stopped
+
   watchdog:
     build:
       context: ./services/watchdog
