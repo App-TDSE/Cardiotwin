@@ -7,13 +7,13 @@ variable "resource_group_name" {
 variable "location" {
   type        = string
   description = "Región de Azure donde se desplegarán los recursos"
-  default     = "southcentralus"
+  default     = "centralus"
 }
 
 variable "vm_size" {
   type        = string
   description = "Tamaño de la máquina virtual"
-  default     = "Standard_D2s_v3"
+  default     = "Standard_B2s"
 }
 
 variable "admin_username" {
