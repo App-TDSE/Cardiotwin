@@ -1006,6 +1006,10 @@
     padding-right: 32px;
     cursor: pointer;
   }
+  .pf-select option {
+    color: #000;
+    background: #fff;
+  }
 
   .pf-toggle-group { display: flex; gap: 6px; }
   .pf-toggle {
@@ -1042,7 +1046,7 @@
     white-space: nowrap;
   }
   .pf-action:hover { background: rgba(6,182,212,0.18); }
-  .pf-action.connected { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.4); color: #6ee7b7; }
+  .pf-action.connected { background: rgba(16,185,129,0.15); border-color: #10b981; color: #6ee7b7; }
   .pf-action svg { width: 12px; height: 12px; }
 
   .patient-foot {
@@ -1080,14 +1084,40 @@
 
   /* Result panel inside drawer */
   .pf-result {
-    margin-top: 22px;
-    padding: 20px;
-    background: rgba(13,19,34,0.7);
-    border: 1px solid var(--border);
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
     border-radius: var(--radius);
     display: none;
+    
+    /* Centered Modal Styles */
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(500px, 90vw);
+    z-index: 500;
+    box-shadow: 0 0 60px rgba(0,0,0,0.9), 0 0 30px rgba(229,62,62,0.25);
+    animation: pfResultFade 350ms cubic-bezier(.22,.61,.36,1);
+  }
+  @keyframes pfResultFade {
+    from { opacity: 0; transform: translate(-50%, -45%); }
+    to   { opacity: 1; transform: translate(-50%, -50%); }
   }
   .pf-result.show { display: block; }
+
+  .pf-result-close {
+    margin-top: 24px;
+    width: 100%;
+    padding: 12px;
+    background: var(--border-strong);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: all 160ms ease;
+  }
+  .pf-result-close:hover { background: var(--border); border-color: var(--text-mute); }
   .pf-result-eyebrow {
     font-size: 10px; font-weight: 600;
     letter-spacing: 0.14em; text-transform: uppercase;
@@ -1457,7 +1487,7 @@
       <span style="width: 4px; height: 4px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan);"></span>
       Streamlit Dashboard
     </div>
-    <iframe src="/streamlit/" width="100%" height="900px" style="border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-2); box-shadow: var(--shadow-card);"></iframe>
+    <iframe id="st-dashboard" src="/streamlit/" width="100%" height="720px" scrolling="no" style="border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-2); box-shadow: var(--shadow-card); overflow: hidden;"></iframe>
   </section>
 
   <!-- ================================ FOOTER ================================ -->
@@ -1606,14 +1636,6 @@
       </div>
     </div>
 
-    <!-- Result lives inside the scrollable body -->
-    <div class="pf-result" id="pf-result">
-      <div class="pf-result-eyebrow">Tu riesgo coronario · 10 años</div>
-      <div class="pf-result-risk" id="pf-risk-val"><span id="pf-risk-num">0</span><span class="pct">%</span></div>
-      <div class="pf-result-label" id="pf-risk-label">—</div>
-      <div class="pf-result-meter"><div class="pf-result-meter-fill" id="pf-risk-fill" style="width:0%;"></div></div>
-      <div class="pf-shap-list" id="pf-shap-list"></div>
-    </div>
     <div class="pf-error" id="pf-error" style="display:none;"></div>
   </form>
 
@@ -2110,8 +2132,25 @@
 /* ============================================================
    Patient mode · drawer + Web Bluetooth + /api/predict
    ============================================================ */
-(() => {
+document.addEventListener('DOMContentLoaded', () => {
   'use strict';
+
+  // Fix Streamlit internal scrollbars (if same-origin)
+  const stFrame = document.getElementById('st-dashboard');
+  if (stFrame) {
+    const hideScroll = () => {
+      try {
+        const style = document.createElement('style');
+        style.textContent = `
+          ::-webkit-scrollbar { display: none !important; }
+          body, .main, .stApp { overflow: hidden !important; }
+        `;
+        stFrame.contentDocument.head.appendChild(style);
+      } catch(e) {}
+    };
+    stFrame.addEventListener('load', hideScroll);
+  }
+
 
   const drawer  = document.getElementById('patient-drawer');
   const overlay = document.getElementById('patient-overlay');
@@ -2199,9 +2238,11 @@
     }
     try {
       bleLab.textContent = 'Buscando...';
+      // Cambiamos a acceptAllDevices: true para que aparezcan todos los dispositivos,
+      // ya que muchas pulseras no anuncian el servicio de ritmo cardíaco durante el escaneo.
       const device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: ['heart_rate'] }],
-        optionalServices: ['battery_service'],
+        acceptAllDevices: true,
+        optionalServices: ['heart_rate', 'battery_service'],
       });
       bleDevice = device;
       device.addEventListener('gattserverdisconnected', () => {
@@ -2209,7 +2250,17 @@
         bleLab.textContent = 'Conectar pulsera';
       });
       const server = await device.gatt.connect();
-      const service = await server.getPrimaryService('heart_rate');
+      
+      // Verificamos si el dispositivo tiene el servicio de ritmo cardíaco
+      let service;
+      try {
+        service = await server.getPrimaryService('heart_rate');
+      } catch (sErr) {
+        // Si no lo tiene, desconectamos y avisamos al usuario
+        await device.gatt.disconnect();
+        throw new Error('El dispositivo seleccionado no parece ser un monitor de ritmo cardíaco compatible (falta el servicio Heart Rate).');
+      }
+
       const char = await service.getCharacteristic('heart_rate_measurement');
       await char.startNotifications();
       char.addEventListener('characteristicvaluechanged', (e) => {
@@ -2217,12 +2268,13 @@
         if (hr > 0 && hr < 250) hrInput.value = hr;
       });
       bleBtn.classList.add('connected');
-      bleLab.textContent = device.name || 'Conectado';
+      bleLab.textContent = 'Conectado';
     } catch (err) {
       console.error(err);
       bleLab.textContent = 'Conectar pulsera';
-      if (err.name !== 'NotFoundError') {
-        showError('No se pudo conectar al dispositivo BLE: ' + err.message);
+      // No mostramos error si el usuario simplemente canceló la búsqueda
+      if (err.name !== 'NotFoundError' && err.message !== 'User cancelled the requestDevice() chooser.') {
+        showError('Error de conexión BLE: ' + err.message);
       }
     }
   });
@@ -2286,8 +2338,14 @@
     }
 
     result.classList.add('show');
-    // scroll to result
-    result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Handle result close
+  const resultClose = document.getElementById('pf-result-close');
+  if (resultClose) {
+    resultClose.addEventListener('click', () => {
+      result.classList.remove('show');
+    });
   }
 
   form.addEventListener('submit', async (e) => {
@@ -2336,7 +2394,17 @@
     result.classList.remove('show');
     errorEl.style.display = 'none';
   });
-})();
+});
 </script>
+
+<div class="pf-result" id="pf-result">
+  <div class="pf-result-eyebrow">Tu riesgo coronario · 10 años</div>
+  <div class="pf-result-risk" id="pf-risk-val"><span id="pf-risk-num">0</span><span class="pct">%</span></div>
+  <div class="pf-result-label" id="pf-risk-label">—</div>
+  <div class="pf-result-meter"><div class="pf-result-meter-fill" id="pf-risk-fill" style="width:0%;"></div></div>
+  <div class="pf-shap-list" id="pf-shap-list"></div>
+  <button type="button" class="pf-result-close" id="pf-result-close">Cerrar resultado</button>
+</div>
+
 </body>
 </html>
