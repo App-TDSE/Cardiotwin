@@ -1,16 +1,43 @@
 import json
 import os
 import sqlite3
-from typing import Any
+from typing import Any, Optional
 
-from fastapi import FastAPI
+import joblib
+import pandas as pd
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel, Field
 
 DB_PATH = os.getenv("DB_PATH", "/data/cardiotwin.db")
 INDEX_PATH = os.getenv("INDEX_PATH", "/app/static/index.html")
+MODEL_PATH = os.getenv("MODEL_PATH", "/data/model.pkl")
 HISTORY_LEN = int(os.getenv("HISTORY_LEN", "60"))
 
 app = FastAPI(title="CardioTwin Dashboard")
+
+# ---- Lazy-loaded model + SHAP explainer (the engine writes the model
+# to /data/model.pkl so we share it via the shared-data volume) ------------
+_MODEL_CACHE: dict[str, Any] = {"model": None, "explainer": None, "features": None, "mtime": None}
+
+
+def _ensure_model():
+    """Load model + SHAP explainer once. Reload if file changed on disk."""
+    if not os.path.exists(MODEL_PATH):
+        raise HTTPException(
+            status_code=503,
+            detail=f"Modelo aún no disponible en {MODEL_PATH}. Espera unos segundos.",
+        )
+    mtime = os.path.getmtime(MODEL_PATH)
+    if _MODEL_CACHE["model"] is None or _MODEL_CACHE["mtime"] != mtime:
+        import shap  # imported lazily to keep cold-start fast for /api/state
+
+        model = joblib.load(MODEL_PATH)
+        _MODEL_CACHE["model"] = model
+        _MODEL_CACHE["features"] = list(getattr(model, "feature_names_in_", []))
+        _MODEL_CACHE["explainer"] = shap.TreeExplainer(model)
+        _MODEL_CACHE["mtime"] = mtime
+    return _MODEL_CACHE["model"], _MODEL_CACHE["explainer"], _MODEL_CACHE["features"]
 
 
 def _query(sql: str, params: tuple = ()) -> list[dict[str, Any]]:
@@ -88,8 +115,66 @@ def health():
             "ok": True,
             "db": os.path.exists(DB_PATH),
             "db_path": DB_PATH,
+            "model_ready": os.path.exists(MODEL_PATH),
         }
     )
+
+
+# ---------------------------------------------------------------------------
+#  Personal prediction endpoint — receives the user's own measurements and
+#  returns risk + SHAP attribution computed by the same XGBoost model the
+#  engine uses on the streaming demo.
+# ---------------------------------------------------------------------------
+class PredictRequest(BaseModel):
+    male: int = Field(..., ge=0, le=1, description="1 = hombre, 0 = mujer")
+    age: int = Field(..., ge=18, le=110)
+    education: int = Field(2, ge=1, le=4)
+    currentSmoker: int = Field(0, ge=0, le=1)
+    cigsPerDay: float = Field(0, ge=0, le=80)
+    BPMeds: int = Field(0, ge=0, le=1)
+    prevalentStroke: int = Field(0, ge=0, le=1)
+    prevalentHyp: int = Field(0, ge=0, le=1)
+    diabetes: int = Field(0, ge=0, le=1)
+    totChol: float = Field(..., ge=80, le=600)
+    sysBP: float = Field(..., ge=60, le=260)
+    diaBP: float = Field(..., ge=30, le=160)
+    BMI: float = Field(..., ge=10, le=70)
+    heartRate: float = Field(..., ge=30, le=220)
+    glucose: float = Field(..., ge=30, le=500)
+
+
+@app.post("/api/predict")
+def predict(req: PredictRequest):
+    model, explainer, features = _ensure_model()
+
+    payload = req.model_dump()
+    df = pd.DataFrame([payload])
+    if features:
+        df = df.reindex(columns=features)
+
+    prediction = int(model.predict(df)[0])
+    probability = float(model.predict_proba(df)[0][1])
+
+    shap_vals = explainer.shap_values(df)
+    if isinstance(shap_vals, list):
+        sv = shap_vals[1][0]
+    else:
+        sv = shap_vals[0]
+
+    fi = pd.DataFrame({"feature": df.columns, "importance": sv})
+    fi["abs"] = fi["importance"].abs()
+    top = fi.sort_values("abs", ascending=False).head(5)
+    shap_top = [
+        {"name": str(row["feature"]), "impact": float(row["importance"])}
+        for _, row in top.iterrows()
+    ]
+
+    return {
+        "prediction": prediction,
+        "risk_pct": probability * 100,
+        "shap": shap_top,
+        "input_echo": payload,
+    }
 
 
 @app.get("/")

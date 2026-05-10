@@ -32,7 +32,7 @@ services:
       - MQTT_TOPIC_RAW=cardiotwin/telemetry/raw
       - MQTT_TOPIC_PRED=cardiotwin/telemetry/predictions
       - DB_PATH=/data/cardiotwin.db
-      - MODEL_PATH=/app/model.pkl
+      - MODEL_PATH=/data/model.pkl
       - DATASET_PATH=/seed/framingham.csv
       - PYTHONUNBUFFERED=1
     volumes:
@@ -57,7 +57,7 @@ services:
       - MQTT_PORT=1883
       - MQTT_TOPIC_RAW=cardiotwin/telemetry/raw
       - DATASET_PATH=/data/framingham.csv
-      - PUBLISH_INTERVAL=1.0
+      - PUBLISH_INTERVAL=5.0
       - NOISE_SIGMA=2.0
       - PYTHONUNBUFFERED=1
     volumes:

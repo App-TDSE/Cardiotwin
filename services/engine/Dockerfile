@@ -22,4 +22,4 @@ RUN useradd -m -u 1000 cardio && \
 USER cardio
 
 # Si no existe model.pkl entrena antes de arrancar el engine
-CMD ["sh", "-c", "if [ ! -f /app/model.pkl ]; then python train.py; fi; exec python -u engine.py"]
+CMD ["sh", "-c", "if [ ! -f /data/model.pkl ]; then python train.py; fi; exec python -u engine.py"]
