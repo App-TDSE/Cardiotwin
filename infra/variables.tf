@@ -7,7 +7,7 @@ variable "resource_group_name" {
 variable "location" {
   type        = string
   description = "Región de Azure donde se desplegarán los recursos"
-  default     = "eastus"
+  default     = "southcentralus"
 }
 
 variable "vm_size" {
