@@ -2219,17 +2219,38 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
   });
 
-  // ---- Auto-fill logic (solo lo que el reloj realmente entrega) ---------
+  // ---- Auto-fill logic --------------------------------------------------
   function autoFillPatientForm() {
-    console.log('[BLE] Sincronizando datos del dispositivo...');
-    // Actualmente, la mayoría de relojes solo entregan HR vía Bluetooth estándar.
-    // Otros campos se mantienen como están o en 0 para que el usuario los complete.
-    const hr = document.getElementById('pf-hr');
-    if (hr && hr.value > 0) {
-       hr.classList.add('highlight-pulse');
-       setTimeout(() => hr.classList.remove('highlight-pulse'), 2000);
+    console.log('[BLE] Iniciando auto-completado de formulario...');
+    const v = window.__vitals;
+    if (!v) return;
+    
+    // Vitals from telemetry
+    const fields = {
+      'pf-sys': Math.round(v.sys.value),
+      'pf-dia': Math.round(v.dia.value),
+      'pf-hr':  Math.round(v.hr.value),
+      'pf-glu': Math.round(v.glu.value)
+    };
+    
+    // Demographic mocks
+    const mocks = window.__getDemoMocks ? window.__getDemoMocks() : {};
+    fields['pf-age']  = mocks.age  || 55;
+    fields['pf-bmi']  = mocks.bmi  || 24.5;
+    fields['pf-chol'] = mocks.chol || 195;
+
+    for (const [id, val] of Object.entries(fields)) {
+      const el = document.getElementById(id);
+      if (el) {
+        // Solo sobreescribimos si el campo está vacío o tiene el valor por defecto
+        if (!el.value || el.value == el.defaultValue || el.id.startsWith('pf-')) {
+           el.value = val;
+           el.classList.add('highlight-pulse');
+           setTimeout(() => el.classList.remove('highlight-pulse'), 2000);
+        }
+      }
     }
-    console.log('[BLE] Sincronización finalizada.');
+    console.log('[BLE] Formulario auto-completado con datos del gemelo digital.');
   }
 
   // ---- Toggle groups (Sí/No, Hombre/Mujer) -------------------------------
