@@ -95,7 +95,7 @@ services:
       engine:
         condition: service_started
     environment:
-      - STREAMLIT_SERVER_BASE_URL_PATH=/streamlit
+      - STREAMLIT_SERVER_BASE_URL_PATH=streamlit
       - DB_PATH=/data/cardiotwin.db
       - PYTHONUNBUFFERED=1
     volumes:

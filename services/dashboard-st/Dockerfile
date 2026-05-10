@@ -18,6 +18,11 @@ USER cardio
 EXPOSE 8501
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD curl -f http://localhost:8501/_stcore/health || exit 1
+    CMD curl -f http://localhost:8501/streamlit/_stcore/health || exit 1
 
-CMD ["streamlit", "run", "app.py", "--server.port", "8501", "--server.address", "0.0.0.0"]
+CMD ["streamlit", "run", "app.py", \
+     "--server.port", "8501", \
+     "--server.address", "0.0.0.0", \
+     "--server.baseUrlPath", "streamlit", \
+     "--server.headless", "true", \
+     "--browser.gatherUsageStats", "false"]
