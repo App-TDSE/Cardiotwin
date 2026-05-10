@@ -7,7 +7,7 @@ variable "resource_group_name" {
 variable "location" {
   type        = string
   description = "Región de Azure donde se desplegarán los recursos"
-  default     = "centralus"
+  default     = "canadacentral"
 }
 
 variable "vm_size" {
