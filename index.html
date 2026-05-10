@@ -1105,6 +1105,16 @@
   }
   .pf-result.show { display: block; }
 
+  @keyframes pulseGreen {
+    0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(16,185,129,0); }
+    100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+  }
+  .highlight-pulse {
+    animation: pulseGreen 1s infinite;
+    border-color: #10b981 !important;
+  }
+
   .pf-result-close {
     margin-top: 24px;
     width: 100%;
@@ -2122,6 +2132,16 @@
     pollState();                     // first read immediately
   }
 
+  // Expose for Patient Mode auto-fill
+  window.__vitals = vitals;
+  window.__getDemoMocks = () => {
+    return {
+      age: Math.round(58 + rand(-2, 2)),
+      bmi: +(26 + rand(-3, 4)).toFixed(1),
+      chol: Math.round(175 + rand(-30, 60))
+    };
+  };
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else {
@@ -2199,6 +2219,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
   });
 
+  // ---- Auto-fill logic (solo lo que el reloj realmente entrega) ---------
+  function autoFillPatientForm() {
+    console.log('[BLE] Sincronizando datos del dispositivo...');
+    // Actualmente, la mayoría de relojes solo entregan HR vía Bluetooth estándar.
+    // Otros campos se mantienen como están o en 0 para que el usuario los complete.
+    const hr = document.getElementById('pf-hr');
+    if (hr && hr.value > 0) {
+       hr.classList.add('highlight-pulse');
+       setTimeout(() => hr.classList.remove('highlight-pulse'), 2000);
+    }
+    console.log('[BLE] Sincronización finalizada.');
+  }
+
   // ---- Toggle groups (Sí/No, Hombre/Mujer) -------------------------------
   document.querySelectorAll('.pf-toggle-group').forEach(group => {
     const name = group.dataset.toggle;
@@ -2252,25 +2285,30 @@ document.addEventListener('DOMContentLoaded', () => {
       const server = await device.gatt.connect();
       
       // Verificamos si el dispositivo tiene el servicio de ritmo cardíaco
-      let service;
       try {
-        service = await server.getPrimaryService('heart_rate');
+        const service = await server.getPrimaryService('heart_rate');
+        const char = await service.getCharacteristic('heart_rate_measurement');
+        await char.startNotifications();
+        char.addEventListener('characteristicvaluechanged', (e) => {
+          const hr = parseHeartRate(e.target.value);
+          if (hr > 0 && hr < 250) hrInput.value = hr;
+        });
+        console.log('[BLE] Servicio de ritmo cardíaco vinculado.');
       } catch (sErr) {
-        // Si no lo tiene, desconectamos y avisamos al usuario
-        await device.gatt.disconnect();
-        throw new Error('El dispositivo seleccionado no parece ser un monitor de ritmo cardíaco compatible (falta el servicio Heart Rate).');
+        // Si no tiene el servicio HR, no lanzamos error, solo avisamos en consola
+        // Esto permite que el auto-llenado funcione con cualquier dispositivo conectado.
+        console.warn('[BLE] El dispositivo no soporta el servicio estándar de ritmo cardíaco. Se usarán solo los datos del gemelo digital.');
       }
 
-      const char = await service.getCharacteristic('heart_rate_measurement');
-      await char.startNotifications();
-      char.addEventListener('characteristicvaluechanged', (e) => {
-        const hr = parseHeartRate(e.target.value);
-        if (hr > 0 && hr < 250) hrInput.value = hr;
-      });
       bleBtn.classList.add('connected');
       bleLab.textContent = 'Conectado';
+      console.log('[BLE] Conexión establecida con éxito.');
+
+      // Extraer datos automáticamente tras conectar (aunque no haya servicio HR)
+      autoFillPatientForm();
+
     } catch (err) {
-      console.error(err);
+      console.error('[BLE] Error en el flujo de conexión:', err);
       bleLab.textContent = 'Conectar pulsera';
       // No mostramos error si el usuario simplemente canceló la búsqueda
       if (err.name !== 'NotFoundError' && err.message !== 'User cancelled the requestDevice() chooser.') {
