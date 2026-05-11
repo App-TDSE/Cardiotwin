@@ -7,31 +7,28 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: SSH and Deploy
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
+          username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
+
           script: |
-            # 1. Ensure the app directory exists
             mkdir -p ~/app
             cd ~/app
 
-            # 2. Clone if first time, or pull latest code
             if [ ! -d ".git" ]; then
               git clone https://github.com/App-TDSE/Cardiotwin.git .
             fi
-            
-            # 3. Clean local changes, fetch, and checkout the correct branch
+
             git reset --hard
             git fetch origin
             git checkout ${{ github.ref_name }}
             git pull origin ${{ github.ref_name }}
 
-            # 4. Build and Run Docker
             docker compose up --build -d
 
-            # 5. Cleanup old images to save space
             docker image prune -f
