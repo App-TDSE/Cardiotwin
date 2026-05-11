@@ -80,8 +80,8 @@ services:
       - INDEX_PATH=/app/static/index.html
       - HISTORY_LEN=60
       - PYTHONUNBUFFERED=1
-    ports:
-      - "8501:8501"
+    expose:
+      - "8501"
     volumes:
       - shared-data:/data
       - ./index.html:/app/static/index.html:ro
@@ -101,6 +101,8 @@ services:
       - STREAMLIT_SERVER_BASE_URL_PATH=streamlit
       - DB_PATH=/data/cardiotwin.db
       - PYTHONUNBUFFERED=1
+    expose:
+      - "8501"
     volumes:
       - shared-data:/data:ro
     networks:
@@ -127,8 +129,6 @@ services:
   nginx:
     image: nginx:alpine
     container_name: cardiotwin-nginx
-    ports:
-      - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -137,6 +137,23 @@ services:
     networks:
       - cardiotwin-net
     restart: unless-stopped
+
+  npm:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: cardiotwin-npm
+    restart: unless-stopped
+
+    ports:
+      - "80:80"
+      - "81:81"
+      - "443:443"
+
+    volumes:
+      - ./npm-data:/data
+      - ./letsencrypt:/etc/letsencrypt
+
+    networks:
+      - cardiotwin-net
 
 networks:
   cardiotwin-net:
