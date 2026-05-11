@@ -1,0 +1,90 @@
+services:
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: cardiotwin-mosquitto
+    restart: unless-stopped
+
+  engine:
+    image: acrcardiotwin4b9571ab.azurecr.io/cardiotwin-engine:latest
+    container_name: cardiotwin-engine
+    depends_on:
+      - mosquitto
+    environment:
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - MQTT_TOPIC_RAW=cardiotwin/telemetry/raw
+      - MQTT_TOPIC_PRED=cardiotwin/telemetry/predictions
+      - DB_PATH=/data/cardiotwin.db
+      - MODEL_PATH=/data/model.pkl
+      - DATASET_PATH=/data/framingham.csv
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - /shared-data:/data
+    restart: unless-stopped
+
+  emulator:
+    image: acrcardiotwin4b9571ab.azurecr.io/cardiotwin-emulator:latest
+    container_name: cardiotwin-emulator
+    depends_on:
+      - mosquitto
+      - engine
+    environment:
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - MQTT_TOPIC_RAW=cardiotwin/telemetry/raw
+      - PUBLISH_INTERVAL=5.0
+      - NOISE_SIGMA=2.0
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+  dashboard:
+    image: acrcardiotwin4b9571ab.azurecr.io/cardiotwin-dashboard:latest
+    container_name: cardiotwin-dashboard
+    depends_on:
+      - engine
+    environment:
+      - DB_PATH=/data/cardiotwin.db
+      - INDEX_PATH=/app/static/index.html
+      - HISTORY_LEN=60
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - /shared-data:/data
+    restart: unless-stopped
+
+  dashboard-st:
+    image: acrcardiotwin4b9571ab.azurecr.io/cardiotwin-dashboard-st:latest
+    container_name: cardiotwin-dashboard-st
+    depends_on:
+      - engine
+    environment:
+      - STREAMLIT_SERVER_BASE_URL_PATH=streamlit
+      - DB_PATH=/data/cardiotwin.db
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - /shared-data:/data
+    restart: unless-stopped
+
+  watchdog:
+    image: acrcardiotwin4b9571ab.azurecr.io/cardiotwin-watchdog:latest
+    container_name: cardiotwin-watchdog
+    depends_on:
+      - mosquitto
+    environment:
+      - MQTT_BROKER=mosquitto
+      - DB_PATH=/data/cardiotwin.db
+    volumes:
+      - /shared-data:/data
+    restart: unless-stopped
+
+  nginx:
+    image: acrcardiotwin4b9571ab.azurecr.io/cardiotwin-nginx:latest
+    container_name: cardiotwin-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - dashboard
+      - dashboard-st
+    restart: unless-stopped
+
+

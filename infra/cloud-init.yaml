@@ -11,6 +11,19 @@ packages:
   - lsb-release
   - git
 
+write_files:
+  - path: /home/azureuser/docker-compose.yml.local
+    content: |
+${DOCKER_COMPOSE_CONTENT}
+    owner: azureuser:azureuser
+    permissions: '0644'
+
+  - path: /home/azureuser/Caddyfile.local
+    content: |
+${CADDYFILE_CONTENT}
+    owner: azureuser:azureuser
+    permissions: '0644'
+
 runcmd:
   # Install Docker
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
@@ -24,8 +37,12 @@ runcmd:
   # Clone the Repository
   - cd /home/azureuser
   - git clone -b develop https://github.com/App-TDSE/Cardiotwin.git
-  - chown -R azureuser:azureuser Cardiotwin
+  
+  # Inject local configs
+  - mv /home/azureuser/docker-compose.yml.local /home/azureuser/Cardiotwin/docker-compose.yml
+  - mv /home/azureuser/Caddyfile.local /home/azureuser/Cardiotwin/Caddyfile
+  - chown -R azureuser:azureuser /home/azureuser/Cardiotwin
 
   # Start the application
-  - cd Cardiotwin
+  - cd /home/azureuser/Cardiotwin
   - docker-compose up --build -d

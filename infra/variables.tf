@@ -1,13 +1,13 @@
 variable "resource_group_name" {
   type        = string
   description = "Nombre del Resource Group en Azure"
-  default     = "rg-cardiotwin"
+  default     = "rg-cardiotwin-v2"
 }
 
 variable "location" {
   type        = string
   description = "Región de Azure donde se desplegarán los recursos"
-  default     = "canadacentral"
+  default     = "eastus"
 }
 
 variable "vm_size" {

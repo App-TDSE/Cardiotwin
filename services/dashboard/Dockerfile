@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app.py .
 RUN mkdir -p /app/static
+COPY static/index.html /app/static/index.html
 
 RUN useradd -m -u 1000 cardio && chown -R cardio:cardio /app
 USER cardio
