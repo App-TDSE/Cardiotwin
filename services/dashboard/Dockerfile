@@ -14,7 +14,7 @@ COPY app.py .
 RUN mkdir -p /app/static
 
 RUN useradd -m -u 1000 cardio && chown -R cardio:cardio /app
-USER cardio
+#USER cardio
 
 EXPOSE 8501
 
