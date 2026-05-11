@@ -20,7 +20,7 @@ services:
       - DATASET_PATH=/data/framingham.csv
       - PYTHONUNBUFFERED=1
     volumes:
-      - shared-data:/data
+      - "${WEBAPP_STORAGE_HOME}/shared-data:/data"
     restart: unless-stopped
 
   emulator:
@@ -49,7 +49,7 @@ services:
       - HISTORY_LEN=60
       - PYTHONUNBUFFERED=1
     volumes:
-      - shared-data:/data
+      - "${WEBAPP_STORAGE_HOME}/shared-data:/data"
     restart: unless-stopped
 
   dashboard-st:
@@ -62,7 +62,7 @@ services:
       - DB_PATH=/data/cardiotwin.db
       - PYTHONUNBUFFERED=1
     volumes:
-      - shared-data:/data
+      - "${WEBAPP_STORAGE_HOME}/shared-data:/data"
     restart: unless-stopped
 
   watchdog:
@@ -74,7 +74,7 @@ services:
       - MQTT_BROKER=mosquitto
       - DB_PATH=/data/cardiotwin.db
     volumes:
-      - shared-data:/data
+      - "${WEBAPP_STORAGE_HOME}/shared-data:/data"
     restart: unless-stopped
 
   nginx:
