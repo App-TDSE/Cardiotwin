@@ -3,7 +3,7 @@ services:
   mosquitto:
     image: eclipse-mosquitto:2.0
     container_name: cardiotwin-mosquitto
-    restart: unless-stopped
+    restart: always
 
   engine:
     image: acrcardiotwin4b9571ab.azurecr.io/cardiotwin-engine:latest
@@ -21,7 +21,7 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - /home/shared-data:/data
-    restart: unless-stopped
+    restart: always
 
   emulator:
     image: acrcardiotwin4b9571ab.azurecr.io/cardiotwin-emulator:latest
@@ -36,7 +36,7 @@ services:
       - PUBLISH_INTERVAL=5.0
       - NOISE_SIGMA=2.0
       - PYTHONUNBUFFERED=1
-    restart: unless-stopped
+    restart: always
 
   dashboard:
     image: acrcardiotwin4b9571ab.azurecr.io/cardiotwin-dashboard:latest
@@ -50,7 +50,7 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - /home/shared-data:/data
-    restart: unless-stopped
+    restart: always
 
   dashboard-st:
     image: acrcardiotwin4b9571ab.azurecr.io/cardiotwin-dashboard-st:latest
@@ -63,7 +63,7 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - /home/shared-data:/data
-    restart: unless-stopped
+    restart: always
 
   watchdog:
     image: acrcardiotwin4b9571ab.azurecr.io/cardiotwin-watchdog:latest
@@ -75,7 +75,7 @@ services:
       - DB_PATH=/data/cardiotwin.db
     volumes:
       - /home/shared-data:/data
-    restart: unless-stopped
+    restart: always
 
   nginx:
     image: acrcardiotwin4b9571ab.azurecr.io/cardiotwin-nginx:latest
@@ -85,6 +85,6 @@ services:
     depends_on:
       - dashboard
       - dashboard-st
-    restart: unless-stopped
+    restart: always
 
 
