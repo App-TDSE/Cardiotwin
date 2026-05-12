@@ -438,10 +438,9 @@ docker compose ps
 
 ### Predicción con Datos de Usuario (Video + Imagen)
 ![alt text](docs/respuesta_prediccion.png)
-[![Ver video](https://img.youtube.com/vi/jhKM0rp9Qo0/maxresdefault.jpg)](https://youtu.be/jhKM0rp9Qo0)
 
-### Despliegue en AWS
-![Instance](docs/aws_instance.jpeg)
+**Video**
+[![Ver video](https://img.youtube.com/vi/Kd1KrMSuqSA/maxresdefault.jpg)](https://youtu.be/Kd1KrMSuqSA)
 
 
 ---
